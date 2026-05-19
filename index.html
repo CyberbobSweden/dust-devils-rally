@@ -32,7 +32,55 @@ canvas{display:block}
 <canvas id="c"></canvas>
 <script>
 // ─── VERSION ────────────────────────────────────────────────────────────────
-const VERSION='v2.0.0';
+const VERSION='v2.1.0';
+
+// ─── FIREBASE CONFIG ─────────────────────────────────────────────────────────
+// 1. Go to https://console.firebase.google.com
+// 2. Create project → Realtime Database → Create database → Test mode
+// 3. Copy your database URL below (looks like https://YOUR-PROJECT-default-rtdb.europe-west1.firebasedatabase.app)
+const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app'; // ← PASTE YOUR FIREBASE URL HERE
+
+// ─── GLOBAL LEADERBOARD ──────────────────────────────────────────────────────
+let globalScores = null;   // null = not loaded yet
+let scoresLoading = false;
+let scoresError   = false;
+
+async function fbSaveScore(entry) {
+  if (!FB_URL) return;
+  try {
+    await fetch(FB_URL + '/scores.json', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name: entry.name.substring(0,12),
+        time: Math.round(entry.time * 100) / 100,
+        pos:  entry.pos,
+        car:  entry.car,
+        ts:   Date.now()
+      })
+    });
+  } catch(e) { console.warn('Score upload failed:', e); }
+}
+
+async function fbLoadScores() {
+  if (!FB_URL) { globalScores = []; return; }
+  scoresLoading = true; scoresError = false;
+  try {
+    const r = await fetch(FB_URL + '/scores.json');
+    const data = await r.json();
+    globalScores = data
+      ? Object.values(data)
+          .filter(s => s && typeof s.time === 'number' && s.name)
+          .sort((a,b) => a.time - b.time)
+          .slice(0, 15)
+      : [];
+  } catch(e) {
+    console.warn('Score load failed:', e);
+    scoresError = true;
+    globalScores = [];
+  }
+  scoresLoading = false;
+}
 
 // ─── CANVAS ─────────────────────────────────────────────────────────────────
 const C=document.getElementById('c'),G=C.getContext('2d');
@@ -529,14 +577,16 @@ function drawMenu(cx){
   });
   cx.textAlign='right';cx.fillStyle='rgba(255,255,255,.22)';cx.font='9px monospace';cx.fillText(VERSION,CW-8,CH-8);
   cx.textAlign='center';cx.fillStyle='rgba(255,255,255,.22)';cx.font='10px monospace';
-  cx.fillText('tap menu items · keyboard: A/D arrows + Enter',CW/2,CH*.96);
+  cx.fillText('tap menu items · keyboard: A/D arrows + Enter',CW/2,CH*.93);
+  cx.fillStyle='rgba(255,200,100,.38)';cx.font='9px monospace';
+  cx.fillText('Made with love by Risingbob · Umea, Sweden',CW/2,CH*.97);
 }
 function menuClick(mx,my){
   for(let i=0;i<MENU_ITEMS.length;i++){
     const by=CH*.48+i*52;
     if(mx>=CW/2-125&&mx<=CW/2+125&&my>=by-22&&my<=by+18){
       menuSel=i;
-      if(i===0)startRace();else if(i===1)state='garage';else state='leaderboard';
+      if(i===0)startRace();else if(i===1)state='garage';else{state='leaderboard';lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoadScores();}
       return;
     }
   }
@@ -624,22 +674,84 @@ function garageClick(mx,my){
 }
 
 // ─── SCREENS: LEADERBOARD ────────────────────────────────────────────────────
+let lbTab=0;
+
 function drawLeaderboard(cx){
   cx.fillStyle='#08080f';cx.fillRect(0,0,CW,CH);
-  cx.fillStyle='rgba(0,0,0,.35)';cx.fillRect(0,0,CW,52);
-  cx.textAlign='left';cx.fillStyle='rgba(255,255,255,.38)';cx.font='11px monospace';cx.fillText('◄ BACK',12,33);
+  cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,CW,52);
+  cx.textAlign='left';cx.fillStyle='rgba(255,255,255,.38)';cx.font='11px monospace';cx.fillText('< BACK',12,33);
   cx.textAlign='center';cx.fillStyle='#ffdd33';cx.font='bold 18px monospace';cx.fillText('LEADERBOARD',CW/2,33);
-  const sc=S.scores.slice(0,10);
-  if(!sc.length){cx.fillStyle='rgba(255,255,255,.38)';cx.font='13px monospace';cx.fillText('No races yet — get out there!',CW/2,CH/2);return;}
-  sc.forEach((s,i)=>{
-    const y=68+i*38,mc=['#ffdd22','#aaaaaa','#cc8844'][i]||'rgba(255,255,255,.55)';
-    const m=Math.floor(s.time/60),sec=String(Math.floor(s.time%60)).padStart(2,'0'),ms=String(Math.floor((s.time%1)*100)).padStart(2,'0');
-    const sfx=['ST','ND','RD'][s.pos-1]||'TH';
-    cx.fillStyle=mc;cx.font=`${i<3?'bold ':''}${i<3?13:12}px monospace`;
-    cx.textAlign='left';cx.fillText(`${i+1}. ${s.name}`,24,y);
-    cx.textAlign='right';cx.fillText(`${m}:${sec}.${ms}  [${s.pos}${sfx}]  ${s.car.toUpperCase()}`,CW-24,y);
-    cx.fillStyle='rgba(255,255,255,.07)';cx.fillRect(12,y+5,CW-24,1);
+  // Tabs
+  const tabs=['[WORLD] GLOBAL','[PHONE] LOCAL'];
+  tabs.forEach((t,i)=>{
+    const tx=CW/2-72+i*76,ty=55,active=lbTab===i;
+    cx.fillStyle=active?'rgba(255,221,51,.18)':'rgba(255,255,255,.05)';
+    cx.beginPath();cx.roundRect(tx-5,ty-14,70,22,4);cx.fill();
+    cx.strokeStyle=active?'#ffdd33':'rgba(255,255,255,.15)';cx.lineWidth=active?1.5:1;cx.stroke();
+    cx.fillStyle=active?'#ffdd33':'rgba(255,255,255,.45)';cx.font=(active?'bold ':'')+'10px monospace';
+    cx.fillText(t,tx+30,ty+2);
   });
+  if(lbTab===0){
+    cx.fillStyle='rgba(255,255,255,.14)';cx.beginPath();cx.roundRect(CW-58,58,46,18,4);cx.fill();
+    cx.fillStyle='rgba(255,255,255,.5)';cx.font='9px monospace';cx.textAlign='center';cx.fillText('RELOAD',CW-35,70);
+  }
+  const rowH=36,startY=82;
+  if(lbTab===0){
+    if(!FB_URL){
+      cx.fillStyle='rgba(255,200,80,.75)';cx.font='bold 13px monospace';cx.textAlign='center';
+      cx.fillText('Firebase not configured yet.',CW/2,CH*.38);
+      cx.fillStyle='rgba(255,255,255,.4)';cx.font='11px monospace';
+      cx.fillText('Paste your FB_URL in index.html',CW/2,CH*.38+24);
+      cx.fillText('to enable global scores for all players!',CW/2,CH*.38+42);
+      return;
+    }
+    if(scoresLoading){
+      cx.fillStyle='rgba(255,255,255,.4)';cx.font='13px monospace';cx.textAlign='center';
+      cx.fillText('Loading'+'.'.repeat(Math.floor(Date.now()/400)%4),CW/2,CH/2);return;
+    }
+    if(scoresError){
+      cx.fillStyle='rgba(255,100,80,.7)';cx.font='13px monospace';cx.textAlign='center';
+      cx.fillText('Could not load scores.',CW/2,CH*.42);
+      cx.fillStyle='rgba(255,255,255,.35)';cx.font='10px monospace';
+      cx.fillText('Check your Firebase URL + internet.',CW/2,CH*.42+20);return;
+    }
+    const sc=(globalScores||[]).slice(0,Math.min(12,Math.floor((CH-startY-10)/rowH)));
+    if(!sc.length){cx.fillStyle='rgba(255,255,255,.38)';cx.font='13px monospace';cx.textAlign='center';cx.fillText('No global scores yet!',CW/2,CH/2);return;}
+    sc.forEach((s,i)=>{
+      const y=startY+i*rowH,mc=['#ffdd22','#aaaaaa','#cc8844'][i]||'rgba(255,255,255,.55)';
+      const mm=Math.floor(s.time/60),sec=String(Math.floor(s.time%60)).padStart(2,'0'),ms=String(Math.floor((s.time%1)*100)).padStart(2,'0');
+      const sfx=['ST','ND','RD'][s.pos-1]||'TH';
+      const isMe=s.name===S.name;
+      if(isMe){cx.fillStyle='rgba(255,221,51,.07)';cx.fillRect(8,y-14,CW-16,rowH-2);}
+      cx.fillStyle=mc;cx.font=(i<3?'bold ':'')+String(i<3?13:12)+'px monospace';
+      cx.textAlign='left';cx.fillText((i+1)+'. '+s.name+(isMe?' <--YOU':''),22,y);
+      cx.textAlign='right';cx.fillText(mm+':'+sec+'.'+ms,CW-105,y);
+      cx.fillStyle='rgba(255,255,255,.3)';cx.font='9px monospace';
+      cx.fillText(s.pos+sfx+' '+((s.car||'').toUpperCase()),CW-12,y);
+      cx.fillStyle='rgba(255,255,255,.07)';cx.fillRect(12,y+rowH*.7,CW-24,1);
+    });
+  }else{
+    const sc=S.scores.slice(0,Math.min(12,Math.floor((CH-startY-10)/rowH)));
+    if(!sc.length){cx.fillStyle='rgba(255,255,255,.38)';cx.font='13px monospace';cx.textAlign='center';cx.fillText('No local races yet!',CW/2,CH/2);return;}
+    sc.forEach((s,i)=>{
+      const y=startY+i*rowH,mc=['#ffdd22','#aaaaaa','#cc8844'][i]||'rgba(255,255,255,.55)';
+      const mm=Math.floor(s.time/60),sec=String(Math.floor(s.time%60)).padStart(2,'0'),ms=String(Math.floor((s.time%1)*100)).padStart(2,'0');
+      const sfx=['ST','ND','RD'][s.pos-1]||'TH';
+      cx.fillStyle=mc;cx.font=(i<3?'bold ':'')+String(i<3?13:12)+'px monospace';
+      cx.textAlign='left';cx.fillText((i+1)+'. '+s.name,22,y);
+      cx.textAlign='right';cx.fillText(mm+':'+sec+'.'+ms+'  '+s.pos+sfx,CW-12,y);
+      cx.fillStyle='rgba(255,255,255,.07)';cx.fillRect(12,y+rowH*.7,CW-24,1);
+    });
+  }
+}
+
+function leaderboardClick(mx,my){
+  if(mx<90&&my<52){state='menu';return;}
+  if(my>=41&&my<=77){
+    if(mx>=CW/2-77&&mx<=CW/2+4){lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoadScores();}
+    if(mx>=CW/2+4&&mx<=CW/2+77)lbTab=1;
+  }
+  if(lbTab===0&&mx>=CW-58&&mx<=CW-12&&my>=58&&my<=76){globalScores=null;fbLoadScores();}
 }
 
 // ─── SCREENS: RESULTS ────────────────────────────────────────────────────────
@@ -693,7 +805,9 @@ function finishRace(){
   if(!cars[0].wentOffTrack){earned+=40;resReasons.push('Clean race bonus: +$40');}
   if(raceT<110&&pos===1){earned+=60;resReasons.push('Speed bonus: +$60');}
   S.coins+=earned;resCoins=earned;
-  S.scores.push({name:S.name||'ANON',time:raceT,pos,car:S.selected});
+  const scoreEntry={name:S.name||'ANON',time:raceT,pos,car:S.selected};
+  S.scores.push(scoreEntry);
+  fbSaveScore(scoreEntry);  // save to global leaderboard
   S.scores.sort((a,b)=>a.time-b.time);S.scores=S.scores.slice(0,10);
   doSave();state='results';
 }
@@ -705,7 +819,7 @@ C.addEventListener('touchstart',e=>{
   const t=e.changedTouches[0];
   if(state==='menu')menuClick(t.clientX,t.clientY);
   else if(state==='garage')garageClick(t.clientX,t.clientY);
-  else if(state==='leaderboard'&&t.clientX<90&&t.clientY<52)state='menu';
+  else if(state==='leaderboard')leaderboardClick(t.clientX,t.clientY);
   else if(state==='results')resultsClick(t.clientX,t.clientY);
   updCtrl();
 },{passive:false});
@@ -715,7 +829,7 @@ C.addEventListener('click',e=>{
   initAudio();
   if(state==='menu')menuClick(e.clientX,e.clientY);
   else if(state==='garage')garageClick(e.clientX,e.clientY);
-  else if(state==='leaderboard'&&e.clientX<90&&e.clientY<52)state='menu';
+  else if(state==='leaderboard')leaderboardClick(e.clientX,e.clientY);
   else if(state==='results')resultsClick(e.clientX,e.clientY);
 });
 window.addEventListener('keydown',e=>{
@@ -727,7 +841,7 @@ window.addEventListener('keydown',e=>{
   if(state==='menu'){
     if(e.key==='ArrowDown')menuSel=(menuSel+1)%3;
     if(e.key==='ArrowUp')menuSel=(menuSel+2)%3;
-    if(e.key==='Enter'){if(menuSel===0)startRace();else if(menuSel===1)state='garage';else state='leaderboard';}
+    if(e.key==='Enter'){if(menuSel===0)startRace();else if(menuSel===1)state='garage';else{state='leaderboard';lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoadScores();}}
   }
   if((state==='garage'||state==='leaderboard')&&(e.key==='Escape'||e.key==='Backspace'))state='menu';
   if(state==='results'){if(e.key==='Enter')startRace();if(e.key==='Escape')state='menu';}
