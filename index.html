@@ -398,7 +398,7 @@ function doCollisions(){
           // Sync scalar speed
           a.sp=a.vx*Math.sin(a.a)-a.vy*Math.cos(a.a);
           b.sp=b.vx*Math.sin(b.a)-b.vy*Math.cos(b.a);
-          beep(110+Math.random()*70,.13,.28,'sawtooth'); camShake=7;
+          beep(110+Math.random()*70,.13,.22,'sawtooth'); camShake=3;
           // Sparks
           const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
           for(let k=0;k<5;k++)addDust(mx,my,'#ffcc44',1);
@@ -512,7 +512,7 @@ function drawTrack(cx,cam,SC){
     cx.save();
     cx.translate(g.cx,g.cy);
     // rotate so local Y = track tangent direction
-    cx.rotate(Math.atan2(g.tdx,g.tdy));
+    cx.rotate(Math.atan2(g.tdy,g.tdx));
     const hw=TW-10;
     // translucent filled band
     cx.fillStyle=passed?'rgba(30,220,70,.2)':'rgba(255,200,40,.15)';
@@ -979,10 +979,9 @@ function loop(now){
     // Camera FX: tilt on drift + shake on collision
     if(state==='racing'){
       const pl=cars[0];
-      const tilt=pl.driftAng*.07;
-      camRot+=(tilt-camRot)*.1;
-      camShake*=.82;camSX=(Math.random()-.5)*camShake;camSY=(Math.random()-.5)*camShake;
-    } else { camRot*=.9; camShake=0; }
+      // No drift tilt — just gentle shake on collision
+      camShake*=.78;camSX=(Math.random()-.5)*camShake;camSY=(Math.random()-.5)*camShake;
+    } else { camRot=0; camShake*=.78; camSX=(Math.random()-.5)*camShake;camSY=(Math.random()-.5)*camShake; }
     // World draw with camera transform
     G.save();
     G.translate(CW/2+camSX,CH/2+camSY);G.rotate(camRot);G.translate(-CW/2,-CH/2);
