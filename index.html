@@ -62,7 +62,7 @@ async function fbSaveScore(entry) {
   } catch(e) { console.warn('Score upload failed:', e); }
 }
 
-async function fbLoadScores() {
+async function fbLoad() {
   if (!FB_URL) { globalScores = []; return; }
   scoresLoading = true; scoresError = false;
   try {
@@ -270,15 +270,13 @@ class Car{
     }
 
     // Lap counting — ANTI-CHEAT: must pass all 4 gates in order
+    // ANTI-CHEAT: ordered checkpoints, forward-only
     const prog=tProg(this.x,this.y);
-    const CPS=[.22,.44,.66,.88];
-    CPS.forEach((cp,i)=>{
-      if(!this.cpFlags[i]&&this.pp<cp&&prog>=cp)this.cpFlags[i]=true;
-    });
-    if(this.cpFlags.every(v=>v)&&this.pp>.88&&prog<.12){
-      const lapT=rT-this.lapStart;this.lapStart=rT;
-      this.lap++;this.cpFlags=[false,false,false,false];
-      if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);cpFlashTime=Date.now();}
+    const fwd=prog>this.pp||(this.pp>.88&&prog<.12);
+    if(fwd&&this.nextCP<4){const fr=CP_GATES[this.nextCP].fr;if(this.pp<fr&&prog>=fr)this.nextCP++;}
+    if(this.nextCP>=4&&this.pp>.88&&prog<.12){
+      this.lap++;this.nextCP=0;
+      if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
     }
     this.pp=prog;this.total=this.lap+prog;
   }
@@ -506,6 +504,35 @@ function drawTrack(cx,cam,SC){
     cx.lineTo(t0.x+fnx*f1+fx*10,t0.y+fny*f1+fy*10);cx.lineTo(t0.x+fnx*f0+fx*10,t0.y+fny*f0+fy*10);
     cx.fill();
   }
+
+  // Checkpoint gates — drawn as bold sector bands across track
+  const _pl2=cars[0];
+  CP_GATES.forEach((g,i)=>{
+    const passed=_pl2&&_pl2.nextCP>i;
+    cx.save();
+    cx.translate(g.cx,g.cy);
+    // rotate so local Y = track tangent direction
+    cx.rotate(Math.atan2(g.tdx,g.tdy));
+    const hw=TW-10;
+    // translucent filled band
+    cx.fillStyle=passed?'rgba(30,220,70,.2)':'rgba(255,200,40,.15)';
+    cx.fillRect(-11,-hw,22,hw*2);
+    // bold centre line
+    cx.strokeStyle=passed?'rgba(30,230,80,.7)':'rgba(255,210,40,.6)';
+    cx.lineWidth=6;
+    cx.beginPath();cx.moveTo(0,-hw);cx.lineTo(0,hw);cx.stroke();
+    // chevron arrow  
+    cx.strokeStyle=passed?'rgba(30,255,80,.85)':'rgba(255,215,40,.8)';
+    cx.lineWidth=4;
+    cx.beginPath();cx.moveTo(-9,-8);cx.lineTo(0,8);cx.lineTo(9,-8);cx.stroke();
+    cx.restore();
+    if(!passed){
+      cx.fillStyle='rgba(255,215,40,.75)';
+      cx.font='bold 18px monospace';cx.textAlign='center';
+      cx.fillText(i+1, g.cx+g.nx*(TW+24), g.cy+g.ny*(TW+24));
+    }
+  });
+
   cx.restore();
 }
 
@@ -531,6 +558,7 @@ function drawMinimap(cx){
 
 // ─── HUD ─────────────────────────────────────────────────────────────────────
 function drawHUD(cx,pl){
+  if(!pl)return;
   const land=CW>CH,bH=land?48:54;
   cx.fillStyle='rgba(0,0,0,.52)';cx.fillRect(0,0,CW,bH);
   const sorted=[...cars].sort((a,b)=>b.total-a.total);
@@ -646,7 +674,7 @@ function menuClick(mx,my){
     const by=CH*.48+i*52;
     if(mx>=CW/2-125&&mx<=CW/2+125&&my>=by-22&&my<=by+18){
       menuSel=i;
-      if(i===0)startRace();else if(i===1)state='garage';else{state='leaderboard';lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoadScores();}
+      if(i===0)startRace();else if(i===1)state='garage';else{state='leaderboard';lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoad();}
       return;
     }
   }
@@ -808,10 +836,10 @@ function drawLeaderboard(cx){
 function leaderboardClick(mx,my){
   if(mx<90&&my<52){state='menu';return;}
   if(my>=41&&my<=77){
-    if(mx>=CW/2-77&&mx<=CW/2+4){lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoadScores();}
+    if(mx>=CW/2-77&&mx<=CW/2+4){lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoad();}
     if(mx>=CW/2+4&&mx<=CW/2+77)lbTab=1;
   }
-  if(lbTab===0&&mx>=CW-58&&mx<=CW-12&&my>=58&&my<=76){globalScores=null;fbLoadScores();}
+  if(lbTab===0&&mx>=CW-58&&mx<=CW-12&&my>=58&&my<=76){globalScores=null;fbLoad();}
 }
 
 // ─── SCREENS: RESULTS ────────────────────────────────────────────────────────
@@ -847,14 +875,18 @@ function setupRace(){
   const nx=-dy,ny=dx,sa=Math.atan2(t1.x-t0.x,-(t1.y-t0.y));
   const pl=new Car(t0.x,t0.y,sa,S.selected,true);
   const aiPool=['turbo','rally','drift','muscle','banger'].filter(id=>id!==S.selected);
-  const a1=new Car(t0.x-dx*52+nx*26,t0.y-dy*52+ny*26,sa,aiPool[0]);
-  const a2=new Car(t0.x-dx*52-nx*26,t0.y-dy*52-ny*26,sa,aiPool[1]);
-  a1.aiI=6;a2.aiI=10;
-  return{pl,a1,a2,cam:{x:t0.x,y:t0.y}};
+  const ny2=dx; // normal y component
+  const a1=new Car(t0.x-dx*52+nx*26,  t0.y-dy*52+ny2*26, sa,aiPool[0]);
+  const a2=new Car(t0.x-dx*52-nx*26,  t0.y-dy*52-ny2*26, sa,aiPool[1]);
+  const a3=new Car(t0.x-dx*105+nx*26, t0.y-dy*105+ny2*26,sa,aiPool[2]||aiPool[0]);
+  const a4=new Car(t0.x-dx*105-nx*26, t0.y-dy*105-ny2*26,sa,aiPool[3]||aiPool[1]);
+  a1.aiI=5;a2.aiI=8;a3.aiI=3;a4.aiI=11;
+  a3.aiM*=.95;a4.aiM*=.9; // back row slightly slower
+  return{pl,a1,a2,a3,a4,cam:{x:t0.x,y:t0.y}};
 }
 function startRace(){
-  const g=setupRace();cars=[g.pl,g.a1,g.a2];cam=g.cam;
-  parts=[];cdN=3;cdT=0;raceT=0;state='countdown';
+  const g=setupRace();cars=[g.pl,g.a1,g.a2,g.a3,g.a4];cam=g.cam;
+  parts=[];cdN=3;cdT=0;raceT=0;camRot=0;camShake=0;state='countdown';
   beep(440,.12);
 }
 function finishRace(){
@@ -862,12 +894,12 @@ function finishRace(){
   const sorted=[...cars].sort((a,b)=>b.total-a.total),pos=sorted.indexOf(cars[0])+1;
   const base=[200,120,70][pos-1]||50;
   let earned=base;resReasons=[`${pos}${['ST','ND','RD'][pos-1]||'TH'} place: +$${base}`];
-  if(!cars[0].wentOffTrack){earned+=40;resReasons.push('Clean race bonus: +$40');}
+  if(!cars[0].wentOff){earned+=40;resReasons.push('Clean race bonus: +$40');}
   if(raceT<110&&pos===1){earned+=60;resReasons.push('Speed bonus: +$60');}
   S.coins+=earned;resCoins=earned;
   const scoreEntry={name:S.name||'ANON',time:raceT,pos,car:S.selected};
   S.scores.push(scoreEntry);
-  fbSaveScore(scoreEntry);  // save to global leaderboard
+  fbSave(scoreEntry);  // save to global leaderboard
   S.scores.sort((a,b)=>a.time-b.time);S.scores=S.scores.slice(0,10);
   doSave();state='results';
 }
@@ -879,6 +911,7 @@ C.addEventListener('touchstart',e=>{
   const t=e.changedTouches[0];
   if(state==='menu')menuClick(t.clientX,t.clientY);
   else if(state==='garage')garageClick(t.clientX,t.clientY);
+  else if(state==='tracks')trackSelectClick(t.clientX,t.clientY);
   else if(state==='leaderboard')leaderboardClick(t.clientX,t.clientY);
   else if(state==='results')resultsClick(t.clientX,t.clientY);
   updCtrl();
@@ -889,6 +922,7 @@ C.addEventListener('click',e=>{
   initAudio();
   if(state==='menu')menuClick(e.clientX,e.clientY);
   else if(state==='garage')garageClick(e.clientX,e.clientY);
+  else if(state==='tracks')trackSelectClick(e.clientX,e.clientY);
   else if(state==='leaderboard')leaderboardClick(e.clientX,e.clientY);
   else if(state==='results')resultsClick(e.clientX,e.clientY);
 });
@@ -899,9 +933,9 @@ window.addEventListener('keydown',e=>{
   if(e.key==='ArrowDown'||e.key==='s')ctrlB=true;
   if(e.key===' '||e.key==='ArrowUp'){e.preventDefault();ctrlN=true;}
   if(state==='menu'){
-    if(e.key==='ArrowDown')menuSel=(menuSel+1)%3;
-    if(e.key==='ArrowUp')menuSel=(menuSel+2)%3;
-    if(e.key==='Enter'){if(menuSel===0)startRace();else if(menuSel===1)state='garage';else{state='leaderboard';lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoadScores();}}
+    if(e.key==='ArrowDown')menuSel=(menuSel+1)%MENU_ITEMS.length;
+    if(e.key==='ArrowUp')menuSel=(menuSel+MENU_ITEMS.length-1)%MENU_ITEMS.length;
+    if(e.key==='Enter'){if(menuSel===0)startRace();else if(menuSel===1)state='garage';else{state='leaderboard';lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoad();}}
   }
   if((state==='garage'||state==='leaderboard')&&(e.key==='Escape'||e.key==='Backspace'))state='menu';
   if(state==='results'){if(e.key==='Enter')startRace();if(e.key==='Escape')state='menu';}
@@ -919,9 +953,11 @@ function loop(now){
   const dt=Math.min((now-lastT)/1000,.05);lastT=now;
   const SC=getScale();
   G.clearRect(0,0,CW,CH);
+  try{
 
   if(state==='menu'){drawMenu(G);}
   else if(state==='garage'){drawGarage(G);}
+  else if(state==='tracks'){drawTrackSelect(G);}
   else if(state==='leaderboard'){drawTrack(G,{x:TRK[0].x,y:TRK[0].y},getScale(true));drawLeaderboard(G);}
   else if(state==='results'){drawTrack(G,cam,getScale(true));drawResults(G);}
   else{
@@ -964,6 +1000,16 @@ function loop(now){
       G.shadowColor='#ff8800';G.shadowBlur=18;
       G.fillText(cdN>0?String(cdN):'GO!',CW/2,CH*.52);G.shadowBlur=0;
     }
+  }
+  } catch(err) {
+    console.error('Loop error:', err);
+    // Draw error message so it's not just black
+    G.fillStyle='rgba(0,0,0,.7)';G.fillRect(0,0,CW,CH);
+    G.fillStyle='#ff4444';G.font='14px monospace';G.textAlign='center';
+    G.fillText('Error: '+err.message,CW/2,CH/2);
+    G.fillStyle='rgba(255,255,255,.5)';G.font='11px monospace';
+    G.fillText('Check console — tap to go to menu',CW/2,CH/2+24);
+    state='menu';camRot=0;camShake=0;
   }
   requestAnimationFrame(loop);
 }

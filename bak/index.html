@@ -32,7 +32,7 @@ canvas{display:block}
 <canvas id="c"></canvas>
 <script>
 // ─── VERSION ────────────────────────────────────────────────────────────────
-const VERSION='v2.2.0';
+const VERSION='v3.0.0';
 
 // ─── FIREBASE CONFIG ─────────────────────────────────────────────────────────
 // 1. Go to https://console.firebase.google.com
@@ -210,7 +210,7 @@ class Car{
     this.isP=isP;
     this.sp=0;this.vx=0;this.vy=0;
     this.nos=isP?100:55;this.lap=0;
-    this.pp=0;this.cpFlags=[false,false,false,false]; // anti-cheat: 4 mandatory gates
+    this.pp=0;this.nextCP=0; // anti-cheat: next required checkpoint 0-3
     this.aiI=0;this.aiM=.68+Math.random()*.28;
     this.off=false;this.total=0;
     this.nosFlame=0;this.driftAng=0;this.isDrifting=false;
@@ -313,10 +313,14 @@ class Car{
     const bw=def.body==='wide'?sw*1.15:def.body==='long'?sw*.88:sw;
     const bh=def.body==='tall'?sh*1.08:def.body==='low'?sh*.9:sh;
     cx.fillStyle=def.col;cx.beginPath();cx.roundRect(-bw/2,-bh/2,bw,bh,2.5);cx.fill();
+    const _sh=cx.createLinearGradient(-bw/2,0,bw/2,0);_sh.addColorStop(0,'rgba(255,255,255,0)');_sh.addColorStop(.44,'rgba(255,255,255,.18)');_sh.addColorStop(.56,'rgba(255,255,255,.2)');_sh.addColorStop(1,'rgba(0,0,0,.1)');cx.fillStyle=_sh;cx.beginPath();cx.roundRect(-bw/2,-bh/2,bw,bh,2.5);cx.fill();
     // Roof
     cx.fillStyle='rgba(0,0,0,.44)';cx.beginPath();cx.roundRect(-bw*.3,-bh*.26,bw*.6,bh*.36,1.5);cx.fill();
     // Stripe
     cx.fillStyle='rgba(255,255,255,.11)';cx.fillRect(-bw*.09,-bh/2,bw*.18,bh);
+       // Wheels
+    const _wrCar=bw*.17;cx.fillStyle='#111';
+    [[-bw*.37,-bh*.3],[bw*.37,-bh*.3],[-bw*.37,bh*.28],[bw*.37,bh*.28]].forEach(([_wx,_wy])=>{cx.beginPath();cx.arc(_wx,_wy,_wrCar,0,Math.PI*2);cx.fill();cx.strokeStyle='rgba(255,255,255,.18)';cx.lineWidth=1.5;cx.stroke();});
     // Headlights
     cx.fillStyle='#ffe87a';
     cx.fillRect(-bw/2,-bh/2,bw*.28,3.5);cx.fillRect(bw/2-bw*.28,-bh/2,bw*.28,3.5);
@@ -417,8 +421,10 @@ const CP_GATES=(()=>{
     const idx=Math.floor(fr*TN);
     const t=TRK[idx],n=TRK[(idx+1)%TN];
     let dx=n.x-t.x,dy=n.y-t.y,ln=Math.sqrt(dx*dx+dy*dy)||1;dx/=ln;dy/=ln;
-    const nx=-dy,ny=dx;
-    return{cx:t.x,cy:t.y,nx,ny,lx:t.x+nx*TW,ly:t.y+ny*TW,rx:t.x-nx*TW,ry:t.y-ny*TW,fr};
+    const nx=-dy,ny=dx,tdx=dx,tdy=dy;
+    return{cx:t.x,cy:t.y,nx,ny,tdx,tdy,
+      lx:t.x+nx*(TW-8),ly:t.y+ny*(TW-8),
+      rx:t.x-nx*(TW-8),ry:t.y-ny*(TW-8),fr};
   });
 })();
 
@@ -454,7 +460,7 @@ function getScale(menu=false){
     return Math.min(CH/(yx-yn+TW*2),CW/(xx-xn+TW*2))*0.88;
   }
   // Racing: follow player close — show ~420 world-units of height
-  return CW>CH ? CH/390 : CH/460;
+  return CW>CH ? CH/560 : CH/660;
 }
 
 // ─── DRAW TRACK ──────────────────────────────────────────────────────────────
@@ -471,12 +477,17 @@ function drawTrack(cx,cam,SC){
   }
   function tp(){cx.beginPath();cx.moveTo(TRK[0].x,TRK[0].y);for(let i=1;i<TN;i++)cx.lineTo(TRK[i].x,TRK[i].y);cx.closePath();}
   cx.lineJoin='round';cx.lineCap='round';
-  tp();cx.strokeStyle='#604520';cx.lineWidth=TW*2+22;cx.stroke();
+  // Track: shadow edge → dirt → lighter inner → surface details
+  tp();cx.strokeStyle='rgba(0,0,0,.35)';cx.lineWidth=TW*2+30;cx.stroke();
+  tp();cx.strokeStyle='#604520';cx.lineWidth=TW*2+16;cx.stroke();
   tp();cx.strokeStyle='#b87840';cx.lineWidth=TW*2;cx.stroke();
   tp();cx.strokeStyle='#cc9060';cx.lineWidth=TW*2-28;cx.stroke();
-  tp();cx.strokeStyle='rgba(70,40,15,.15)';cx.lineWidth=20;cx.stroke();
-  cx.setLineDash([22,30]);
-  tp();cx.strokeStyle='rgba(255,240,160,.18)';cx.lineWidth=2.5;cx.stroke();
+  tp();cx.strokeStyle='rgba(255,255,255,.06)';cx.lineWidth=TW*2-58;cx.stroke();
+  // Tyre groove hints
+  tp();cx.strokeStyle='rgba(50,28,8,.2)';cx.lineWidth=20;cx.stroke();
+  // Centre dashes
+  cx.setLineDash([24,28]);
+  tp();cx.strokeStyle='rgba(255,240,160,.18)';cx.lineWidth=2.8;cx.stroke();
   cx.setLineDash([]);
   for(const m of MRKS){
     cx.fillStyle=m.alt?'#cc1111':'#eee';
@@ -513,6 +524,8 @@ function drawMinimap(cx){
   for(const p of TRK){pt=tp(p);cx.lineTo(pt.x,pt.y);}
   cx.closePath();cx.strokeStyle='#b87840';cx.lineWidth=4.5;cx.stroke();
   for(const c of cars){const cp=tp(c);cx.fillStyle=c.isP?'#fff':c.def.col;cx.beginPath();cx.arc(cp.x,cp.y,c.isP?3.5:2.5,0,Math.PI*2);cx.fill();}
+  // CP dots on minimap
+  CP_GATES.forEach((g,i)=>{const cp=tp(g);const passed=cars[0]&&cars[0].nextCP>i;cx.fillStyle=passed?'rgba(40,255,80,.7)':'rgba(255,200,40,.5)';cx.beginPath();cx.arc(cp.x,cp.y,2.5,0,Math.PI*2);cx.fill();});
   cx.restore();
 }
 
