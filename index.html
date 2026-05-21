@@ -8,38 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Dust Devils Rally">
   <meta name="theme-color" content="#111">
   <title>Dust Devils Rally</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-  <div id="rotate">
-    <span>&#8635;</span>
-    Rotate to landscape for best experience!
-  </div>
-
-  <div id="nscreen">
-    <p>DUST DEVILS RALLY</p>
-    <p class="sub">Enter your racer name</p>
-    <input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
-    <button id="nbtn">START RACING!</button>
-  </div>
-
-  <canvas id="c"></canvas>
-
-  <!-- Load order matters: each file can use globals from files before it -->
-  <script src="js/config.js"></script>
-  <script src="js/tracks.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/save.js"></script>
-  <script src="js/particles.js"></script>
-  <script src="js/car.js"></script>
-  <script src="js/render.js"></script>
-  <script src="js/screens.js"></script>
-  <script src="js/game.js"></script>
-
-</body>
-</html>
-<style>
+  <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
@@ -115,7 +84,12 @@ canvas { display: block; }
 </head>
 <body>
   <div id="rotate"><span>&#8635;</span>Rotate to landscape!</div>
-  <div id="nscreen"><p>DUST DEVILS RALLY</p><p class="sub">Enter your racer name</p><input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off"><button id="nbtn">START RACING!</button></div>
+  <div id="nscreen">
+    <p>DUST DEVILS RALLY</p>
+    <p class="sub">Enter your racer name</p>
+    <input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
+    <button id="nbtn">START RACING!</button>
+  </div>
   <canvas id="c"></canvas>
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
@@ -147,99 +121,104 @@ const CAR_DEFS = [
 ];
 
 // ─── SPLINE MATH ─────────────────────────────────────────────────────────────
-function crPt(a,b,c,d,t) {
-  const t2=t*t, t3=t2*t;
-  return {
+function crPt(a,b,c,d,t){
+  const t2=t*t,t3=t2*t;
+  return{
     x:.5*((2*b.x)+(-a.x+c.x)*t+(2*a.x-5*b.x+4*c.x-d.x)*t2+(-a.x+3*b.x-3*c.x+d.x)*t3),
     y:.5*((2*b.y)+(-a.y+c.y)*t+(2*a.y-5*b.y+4*c.y-d.y)*t2+(-a.y+3*b.y-3*c.y+d.y)*t3)
   };
 }
-function buildSpline(raw, steps) {
-  const n=raw.length, out=[];
-  for (let i=0; i<n; i++) {
-    const a=raw[(i-1+n)%n], b=raw[i], c=raw[(i+1)%n], d=raw[(i+2)%n];
-    for (let j=0; j<steps; j++) out.push(crPt(a,b,c,d,j/steps));
+function buildSpline(raw,steps){
+  const n=raw.length,out=[];
+  for(let i=0;i<n;i++){
+    const a=raw[(i-1+n)%n],b=raw[i],c=raw[(i+1)%n],d=raw[(i+2)%n];
+    for(let j=0;j<steps;j++) out.push(crPt(a,b,c,d,j/steps));
   }
   return out;
 }
-function seededRng(seed) {
-  let s = seed|0;
-  return () => {
-    s = s + 0x6D2B79F5|0;
-    let t = Math.imul(s^s>>>15, 1|s);
-    t = t + Math.imul(t^t>>>7, 61|t) ^ t;
-    return ((t^t>>>14)>>>0) / 4294967296;
+function seededRng(seed){
+  let s=seed|0;
+  return()=>{
+    s=s+0x6D2B79F5|0;
+    let t=Math.imul(s^s>>>15,1|s);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return((t^t>>>14)>>>0)/4294967296;
   };
 }
 
 // ─── TRACK DEFINITIONS ───────────────────────────────────────────────────────
-const ALL_TRACKS = [
-  { name:'DUST DEVILS',  sub:'Classic dirt rally circuit',
-    steps:18, tw:100, grass:'#3d7830', d1:'#b87840', d2:'#cc9060', edge:'#604520',
-    tc:['#267020','#388030','#1e5418'],
-    raw:[{x:450,y:880},{x:760,y:880},{x:1060,y:880},{x:1310,y:760},{x:1490,y:540},
-         {x:1530,y:300},{x:1380,y:140},{x:1120,y:130},{x:870,y:100},{x:620,y:155},
-         {x:390,y:290},{x:250,y:490},{x:220,y:710},{x:310,y:840}] },
+const ALL_TRACKS=[
+  {name:'DUST DEVILS',  sub:'Classic dirt rally circuit',
+   steps:18,tw:100,grass:'#3d7830',d1:'#b87840',d2:'#cc9060',edge:'#604520',
+   tc:['#267020','#388030','#1e5418'],
+   raw:[{x:450,y:880},{x:760,y:880},{x:1060,y:880},{x:1310,y:760},{x:1490,y:540},
+        {x:1530,y:300},{x:1380,y:140},{x:1120,y:130},{x:870,y:100},{x:620,y:155},
+        {x:390,y:290},{x:250,y:490},{x:220,y:710},{x:310,y:840}]},
 
-  { name:'STONE PASS',   sub:'Tight mountain hairpins',
-    steps:16, tw:82, grass:'#2a5520', d1:'#888878', d2:'#aaaaaa', edge:'#404040',
-    tc:['#1e4418','#2a5c20','#163010'],
-    raw:[{x:400,y:760},{x:660,y:760},{x:920,y:720},{x:1100,y:600},{x:1180,y:430},
-         {x:1140,y:270},{x:980,y:165},{x:760,y:145},{x:560,y:190},{x:390,y:320},
-         {x:290,y:490},{x:250,y:650},{x:290,y:740}] },
+  {name:'STONE PASS',   sub:'Tight mountain hairpins',
+   steps:16,tw:82,grass:'#2a5520',d1:'#888878',d2:'#aaaaaa',edge:'#404040',
+   tc:['#1e4418','#2a5c20','#163010'],
+   raw:[{x:400,y:760},{x:660,y:760},{x:920,y:720},{x:1100,y:600},{x:1180,y:430},
+        {x:1140,y:270},{x:980,y:165},{x:760,y:145},{x:560,y:190},{x:390,y:320},
+        {x:290,y:490},{x:250,y:650},{x:290,y:740}]},
 
-  { name:'DESERT STORM', sub:'Wide open high-speed blast',
-    steps:18, tw:118, grass:'#c4a040', d1:'#d4885e', d2:'#e8a078', edge:'#a04c28',
-    tc:['#a8822a','#c0a040','#907030'],
-    raw:[{x:300,y:810},{x:650,y:830},{x:1000,y:820},{x:1360,y:740},{x:1660,y:580},
-         {x:1820,y:360},{x:1760,y:160},{x:1480,y:60},{x:1100,y:50},{x:750,y:110},
-         {x:460,y:230},{x:250,y:440},{x:190,y:660},{x:220,y:780}] },
+  {name:'DESERT STORM', sub:'Wide open high-speed blast',
+   steps:18,tw:118,grass:'#c4a040',d1:'#d4885e',d2:'#e8a078',edge:'#a04c28',
+   tc:['#a8822a','#c0a040','#907030'],
+   raw:[{x:300,y:810},{x:650,y:830},{x:1000,y:820},{x:1360,y:740},{x:1660,y:580},
+        {x:1820,y:360},{x:1760,y:160},{x:1480,y:60},{x:1100,y:50},{x:750,y:110},
+        {x:460,y:230},{x:250,y:440},{x:190,y:660},{x:220,y:780}]},
 
-  { name:'GRAVEL PIT',   sub:'Tight quarry hairpins',
-    steps:15, tw:80, grass:'#6a5838', d1:'#907855', d2:'#a88e68', edge:'#4a3820',
-    tc:['#7a6040','#684e2c','#564018'],
-    raw:[{x:380,y:680},{x:620,y:680},{x:840,y:640},{x:980,y:500},{x:960,y:340},
-         {x:840,y:210},{x:660,y:170},{x:480,y:210},{x:350,y:340},{x:300,y:500},
-         {x:330,y:620}] },
+  {name:'GRAVEL PIT',   sub:'Tight quarry hairpins',
+   steps:15,tw:80,grass:'#6a5838',d1:'#907855',d2:'#a88e68',edge:'#4a3820',
+   tc:['#7a6040','#684e2c','#564018'],
+   raw:[{x:380,y:680},{x:620,y:680},{x:840,y:640},{x:980,y:500},{x:960,y:340},
+        {x:840,y:210},{x:660,y:170},{x:480,y:210},{x:350,y:340},{x:300,y:500},
+        {x:330,y:620}]},
 
-  { name:'COASTAL RUN',  sub:'Sweeping high-speed coast',
-    steps:20, tw:122, grass:'#3a7848', d1:'#c8a055', d2:'#dab86a', edge:'#6a4c18',
-    tc:['#2a7038','#3a8848','#1e5828'],
-    raw:[{x:220,y:880},{x:580,y:900},{x:960,y:880},{x:1340,y:820},{x:1680,y:660},
-         {x:1880,y:440},{x:1840,y:220},{x:1580,y:80},{x:1200,y:50},{x:820,y:90},
-         {x:480,y:220},{x:260,y:440},{x:160,y:680},{x:180,y:800}] },
+  {name:'COASTAL RUN',  sub:'Sweeping high-speed coast',
+   steps:20,tw:122,grass:'#3a7848',d1:'#c8a055',d2:'#dab86a',edge:'#6a4c18',
+   tc:['#2a7038','#3a8848','#1e5828'],
+   raw:[{x:220,y:880},{x:580,y:900},{x:960,y:880},{x:1340,y:820},{x:1680,y:660},
+        {x:1880,y:440},{x:1840,y:220},{x:1580,y:80},{x:1200,y:50},{x:820,y:90},
+        {x:480,y:220},{x:260,y:440},{x:160,y:680},{x:180,y:800}]},
+
+  {name:'GRAND CIRCUIT', sub:'Long technical masterclass',
+   steps:22,tw:105,grass:'#2e6028',d1:'#b08050',d2:'#c89068',edge:'#5a3818',
+   tc:['#246020','#306828','#1a4c18'],
+   raw:[{x:300,y:900},{x:650,y:920},{x:1050,y:910},{x:1450,y:860},{x:1800,y:720},
+        {x:2050,y:520},{x:2080,y:280},{x:1920,y:110},{x:1620,y:40},{x:1280,y:60},
+        {x:980,y:150},{x:780,y:80},{x:540,y:50},{x:280,y:140},{x:100,y:320},
+        {x:70,y:560},{x:180,y:760},{x:290,y:870}]},
 ];
 
-// ─── ACTIVE TRACK STATE (rebuilt by activateTrack) ───────────────────────────
-let TRK=[], TN=0, TW=100, TREES=[], MRKS=[], CP_GATES=[], ROCKS=[], TDEF=null;
+// ─── ACTIVE TRACK STATE ───────────────────────────────────────────────────────
+var TRK=[],TN=0,TW=100,TREES=[],MRKS=[],CP_GATES=[],ROCKS=[],FINISH_GATE=null,TDEF=null;
 
-function nearD2(x,y) {
+function nearD2(x,y){
   let m=Infinity;
   for(let i=0;i<TN;i++){const dx=TRK[i].x-x,dy=TRK[i].y-y,d=dx*dx+dy*dy;if(d<m)m=d;}
   return m;
 }
-function tProg(x,y) {
+function tProg(x,y){
   let m=Infinity,mi=0;
   for(let i=0;i<TN;i++){const dx=TRK[i].x-x,dy=TRK[i].y-y,d=dx*dx+dy*dy;if(d<m){m=d;mi=i;}}
   return mi/TN;
 }
-function getScale(menu=false) {
+function getScale(menu=false){
   if(menu){
     let xn=Infinity,xx=-Infinity,yn=Infinity,yx=-Infinity;
     for(const p of TRK){xn=Math.min(xn,p.x);xx=Math.max(xx,p.x);yn=Math.min(yn,p.y);yx=Math.max(yx,p.y);}
     return Math.min(CH/(yx-yn+TW*2.5),CW/(xx-xn+TW*2.5))*0.86;
   }
-  return CW>CH ? CH/520 : CH/600;
+  return CW>CH?CH/520:CH/600;
 }
 
-function activateTrack(idx) {
-  idx = Math.min(Math.max(0,idx), ALL_TRACKS.length-1);
-  TDEF = ALL_TRACKS[idx];
-  TW = TDEF.tw;
-  TRK = buildSpline(TDEF.raw, TDEF.steps);
-  TN = TRK.length;
+function activateTrack(idx){
+  idx=Math.min(Math.max(0,idx),ALL_TRACKS.length-1);
+  TDEF=ALL_TRACKS[idx]; TW=TDEF.tw;
+  TRK=buildSpline(TDEF.raw,TDEF.steps); TN=TRK.length;
 
-  // local nearD2 during build (TRK just set above)
   function nd(x,y){let m=Infinity;for(let i=0;i<TN;i++){const dx=TRK[i].x-x,dy=TRK[i].y-y,d=dx*dx+dy*dy;if(d<m)m=d;}return m;}
 
   // Trees
@@ -247,18 +226,18 @@ function activateTrack(idx) {
   const rt=seededRng(1337+idx*777);
   let xn=Infinity,xx=-Infinity,yn=Infinity,yx=-Infinity;
   for(const p of TDEF.raw){xn=Math.min(xn,p.x);xx=Math.max(xx,p.x);yn=Math.min(yn,p.y);yx=Math.max(yx,p.y);}
-  for(let i=0;i<140;i++){
-    const x=xn-140+rt()*(xx-xn+280), y=yn-140+rt()*(yx-yn+280);
-    if(nd(x,y)>(TW+52)*(TW+52)) TREES.push({x,y,r:7+rt()*13,g:Math.floor(rt()*3)});
+  for(let i=0;i<160;i++){
+    const x=xn-150+rt()*(xx-xn+300),y=yn-150+rt()*(yx-yn+300);
+    if(nd(x,y)>(TW+55)*(TW+55)) TREES.push({x,y,r:7+rt()*13,g:Math.floor(rt()*3)});
   }
 
-  // Rocks beside track
+  // Rocks
   ROCKS=[];
   const rr=seededRng(9999+idx*555);
-  for(let i=0;i<55;i++){
-    const tp=TRK[Math.floor(rr()*TN)], a=rr()*Math.PI*2, dist=TW+14+rr()*55;
-    const rx=tp.x+Math.cos(a)*dist, ry=tp.y+Math.sin(a)*dist;
-    if(nd(rx,ry)>(TW+10)*(TW+10)) ROCKS.push({x:rx,y:ry,r:3+rr()*7});
+  for(let i=0;i<60;i++){
+    const tp=TRK[Math.floor(rr()*TN)],a=rr()*Math.PI*2,dist=TW+16+rr()*50;
+    const rx=tp.x+Math.cos(a)*dist,ry=tp.y+Math.sin(a)*dist;
+    if(nd(rx,ry)>(TW+12)*(TW+12)) ROCKS.push({x:rx,y:ry,r:3+rr()*7});
   }
 
   // Corner markers
@@ -269,12 +248,21 @@ function activateTrack(idx) {
     MRKS.push({lx:t.x-dy*TW,ly:t.y+dx*TW,rx:t.x+dy*TW,ry:t.y-dx*TW,alt:Math.floor(i/12)%2});
   }
 
-  // Checkpoint gates at 22/44/66/88%
+  // Checkpoint gates — extend BEYOND track width so AI always triggers them
   CP_GATES=[.22,.44,.66,.88].map(fr=>{
-    const i2=Math.floor(fr*TN), t=TRK[i2], n=TRK[(i2+1)%TN];
+    const i2=Math.floor(fr*TN),t=TRK[i2],n=TRK[(i2+1)%TN];
     let dx=n.x-t.x,dy=n.y-t.y,ln=Math.sqrt(dx*dx+dy*dy)||1;dx/=ln;dy/=ln;
-    return {cx:t.x,cy:t.y,nx:-dy,ny:dx,tdx:dx,tdy:dy,hw:TW-10,fr};
+    const hw=TW+30; // wider than track for robust detection
+    return{cx:t.x,cy:t.y,nx:-dy,ny:dx,tdx:dx,tdy:dy,hw,
+      lx:t.x-dy*hw,ly:t.y+dx*hw,rx:t.x+dy*hw,ry:t.y-dx*hw,fr};
   });
+
+  // Finish line gate at track start
+  const f0=TRK[0],f1=TRK[1];
+  let fdx=f1.x-f0.x,fdy=f1.y-f0.y,fln=Math.sqrt(fdx*fdx+fdy*fdy)||1;fdx/=fln;fdy/=fln;
+  const fhw=TW+30;
+  FINISH_GATE={cx:f0.x,cy:f0.y,nx:-fdy,ny:fdx,tdx:fdx,tdy:fdy,hw:fhw,
+    lx:f0.x-fdy*fhw,ly:f0.y+fdx*fhw,rx:f0.x+fdy*fhw,ry:f0.y-fdx*fhw};
 }
 
 // ─── AUDIO ───────────────────────────────────────────────────────────────────
@@ -463,127 +451,138 @@ function doCollisions(cars){
   }
 }
 
-// ─── CAR CLASS ───────────────────────────────────────────────────────────────
-class Car {
-  constructor(x, y, angle, defId, isPlayer) {
-    this.x=x; this.y=y; this.a=angle;
-    this.def = CAR_DEFS.find(c=>c.id===defId) || CAR_DEFS[0];
-    this.isP = isPlayer;
+// ─── SEGMENT CROSSING (for checkpoint detection) ─────────────────────────────
+// Returns true if segment (ax,ay)→(bx,by) crosses segment (cx,cy)→(dx,dy)
+function segCross(ax,ay,bx,by,cx,cy,dx,dy){
+  function side(ox,oy,ux,uy,vx,vy){return(ux-ox)*(vy-oy)-(uy-oy)*(vx-ox);}
+  const d1=side(cx,cy,dx,dy,ax,ay),d2=side(cx,cy,dx,dy,bx,by);
+  const d3=side(ax,ay,bx,by,cx,cy),d4=side(ax,ay,bx,by,dx,dy);
+  return((d1>0&&d2<0)||(d1<0&&d2>0))&&((d3>0&&d4<0)||(d3<0&&d4>0));
+}
 
-    // Physics
+// ─── CAR CLASS ───────────────────────────────────────────────────────────────
+class Car{
+  constructor(x,y,angle,defId,isPlayer){
+    this.x=x; this.y=y; this.a=angle;
+    this.px=x; this.py=y; // previous position (for gate crossing detection)
+    this.def=CAR_DEFS.find(c=>c.id===defId)||CAR_DEFS[0];
+    this.isP=isPlayer;
     this.sp=0; this.vx=0; this.vy=0;
     this._prevA=angle;
-
-    // Race state
     this.nos=isPlayer?100:55;
-    this.lap=0; this.pp=0;
-    this.nextCP=0;           // anti-cheat: next required gate (0-3)
-    this.total=0;
+    this.lap=0; this.nextCP=0; this.total=0;
     this.wentOff=false;
-    this.lapStart=0;
-
-    // Drift
-    this.driftAng=0;
-    this.isDrifting=false;
-    this._combo=0;           // drift combo score
-
-    // AI
-    this.aiI=0;
-    this.aiM=0.68+Math.random()*0.28;
-
-    // Visual
-    this.skidTrail=[];
-    this.nosFlame=0;
+    this.aiI=0; this.aiM=0.68+Math.random()*0.28;
+    this.driftAng=0; this.isDrifting=false; this._combo=0;
+    this.skidTrail=[]; this.nosFlame=0;
     this.num=Math.floor(Math.random()*98)+1;
   }
 
-  speed() { return Math.sqrt(this.vx*this.vx+this.vy*this.vy); }
+  speed(){ return Math.sqrt(this.vx*this.vx+this.vy*this.vy); }
 
-  update(dt, L, R, brake, nos, raceTime) {
+  update(dt,L,R,brake,nos,raceTime){
     const def=this.def;
 
     // ── Controls ─────────────────────────────────────────────────────────────
-    if(this.isP) {
-      const maxSp = (nos&&this.nos>0) ? def.top*def.nos : def.top;
-      this.sp = Math.min(this.sp + def.acc*dt, maxSp);
-      if(brake) this.sp = Math.max(this.sp - 490*dt, -55);
-      const tr = 3.2 * Math.min(1, Math.abs(this.sp)/110);
-      if(L) this.a -= tr*dt;
-      if(R) this.a += tr*dt;
-      if(nos&&this.nos>0){ this.nos=Math.max(0,this.nos-52*dt); this.nosFlame=1; }
-      else { this.nos=Math.min(100,this.nos+11*dt); this.nosFlame=Math.max(0,this.nosFlame-.1); }
-    } else {
-      // AI: steer toward waypoint
+    if(this.isP){
+      const maxSp=(nos&&this.nos>0)?def.top*def.nos:def.top;
+      this.sp=Math.min(this.sp+def.acc*dt,maxSp);
+      if(brake) this.sp=Math.max(this.sp-490*dt,-55);
+      const tr=3.2*Math.min(1,Math.abs(this.sp)/110);
+      if(L) this.a-=tr*dt;
+      if(R) this.a+=tr*dt;
+      if(nos&&this.nos>0){this.nos=Math.max(0,this.nos-52*dt);this.nosFlame=1;}
+      else{this.nos=Math.min(100,this.nos+11*dt);this.nosFlame=Math.max(0,this.nosFlame-.1);}
+    }else{
       const wp=TRK[this.aiI];
-      const dx=wp.x-this.x, dy=wp.y-this.y, dist=Math.sqrt(dx*dx+dy*dy);
+      const dx=wp.x-this.x,dy=wp.y-this.y,dist=Math.sqrt(dx*dx+dy*dy);
       const want=Math.atan2(dx,-dy);
       let diff=want-this.a;
       while(diff>Math.PI)diff-=Math.PI*2; while(diff<-Math.PI)diff+=Math.PI*2;
-      this.a += Math.sign(diff)*Math.min(Math.abs(diff),3.2*dt);
+      this.a+=Math.sign(diff)*Math.min(Math.abs(diff),3.2*dt);
       if(dist<95) this.aiI=(this.aiI+9)%TN;
-      this.sp += (320*this.aiM-this.sp)*2.2*dt;
+      this.sp+=(320*this.aiM-this.sp)*2.2*dt;
     }
 
     // ── Real drift physics ────────────────────────────────────────────────────
-    // Fast cornering = grip loss = sliding!
-    const turnRate = Math.abs(this.a-this._prevA) / Math.max(dt,0.001);
-    this._prevA = this.a;
-    const spFrac = Math.min(1, Math.abs(this.sp)/Math.max(def.top,1));
-    const driftLoad = spFrac * Math.min(1, turnRate*1.5);
-    const effGrip = Math.max(0.2, def.grip - driftLoad*(1-def.grip)*2.0);
-    const gf = 1 - Math.pow(1-effGrip, dt*60);
+    const turnRate=Math.abs(this.a-this._prevA)/Math.max(dt,0.001);
+    this._prevA=this.a;
+    const spFrac=Math.min(1,Math.abs(this.sp)/Math.max(def.top,1));
+    const driftLoad=spFrac*Math.min(1,turnRate*1.5);
+    const effGrip=Math.max(0.2,def.grip-driftLoad*(1-def.grip)*2.0);
+    const gf=1-Math.pow(1-effGrip,dt*60);
+    const desVX=Math.sin(this.a)*this.sp,desVY=-Math.cos(this.a)*this.sp;
+    this.vx+=(desVX-this.vx)*gf; this.vy+=(desVY-this.vy)*gf;
 
-    const desVX=Math.sin(this.a)*this.sp, desVY=-Math.cos(this.a)*this.sp;
-    this.vx += (desVX-this.vx)*gf;
-    this.vy += (desVY-this.vy)*gf;
-
-    // ── Off-track ─────────────────────────────────────────────────────────────
-    this.off = nearD2(this.x,this.y) > TW*TW;
-    if(this.off) {
+    // ── Off-track slowdown ────────────────────────────────────────────────────
+    this.off=nearD2(this.x,this.y)>TW*TW;
+    if(this.off){
       this.wentOff=true;
       const pen=Math.pow(0.07,dt);
       this.sp*=pen; this.vx*=pen; this.vy*=pen;
     }
 
     // ── Move ─────────────────────────────────────────────────────────────────
-    this.x += this.vx*dt; this.y += this.vy*dt;
+    this.x+=this.vx*dt; this.y+=this.vy*dt;
+
+    // ── Hard boundary — can't drive too far from track ────────────────────────
+    const dSq=nearD2(this.x,this.y);
+    const maxD=TW*2.2;
+    if(dSq>maxD*maxD){
+      // Find nearest track point
+      let mi=0,md=Infinity;
+      for(let i=0;i<TN;i++){const dx=TRK[i].x-this.x,dy=TRK[i].y-this.y,d=dx*dx+dy*dy;if(d<md){md=d;mi=i;}}
+      const dist=Math.sqrt(md);
+      const nx=(TRK[mi].x-this.x)/dist,ny=(TRK[mi].y-this.y)/dist;
+      // Push back to boundary
+      this.x+=nx*(dist-maxD); this.y+=ny*(dist-maxD);
+      // Kill outward velocity component
+      const outward=this.vx*(-nx)+this.vy*(-ny);
+      if(outward>0){this.vx+=nx*outward*1.8;this.vy+=ny*outward*1.8;}
+      this.sp*=0.15;
+    }
 
     // ── Drift angle ───────────────────────────────────────────────────────────
     const velA=Math.atan2(this.vx,-this.vy);
     let da=velA-this.a;
     while(da>Math.PI)da-=Math.PI*2; while(da<-Math.PI)da+=Math.PI*2;
     this.driftAng=da;
-    this.isDrifting = Math.abs(da)>0.15 && Math.abs(this.sp)>80;
-
-    // Skid trail + combo
-    if(this.isDrifting && Math.abs(this.sp)>90) {
+    this.isDrifting=Math.abs(da)>0.15&&Math.abs(this.sp)>80;
+    if(this.isDrifting&&Math.abs(this.sp)>90){
       this.skidTrail.push({x:this.x,y:this.y,t:Date.now()});
       if(this.skidTrail.length>150) this.skidTrail.shift();
-      if(this.isP) this._combo += Math.abs(da)*Math.abs(this.sp)*dt*0.005;
-    } else {
-      if(this.isP && this._combo>3) {
-        spawnDriftPopup(this, Math.floor(this._combo));
-      }
+      if(this.isP) this._combo+=Math.abs(da)*Math.abs(this.sp)*dt*0.005;
+    }else{
+      if(this.isP&&this._combo>3) spawnDriftPopup(this,Math.floor(this._combo));
       this._combo=0;
     }
 
-    // ── Anti-cheat: ordered checkpoints, forward-only ─────────────────────────
-    const prog=tProg(this.x,this.y);
-    const fwd = prog>this.pp || (this.pp>.88&&prog<.12);
-    if(fwd && this.nextCP<4) {
-      const fr=CP_GATES[this.nextCP].fr;
-      if(this.pp<fr && prog>=fr) this.nextCP++;
+    // ── ANTI-CHEAT: physical gate line crossing, forward direction only ───────
+    // Car must physically cross each gate line in the correct direction
+    if(this.nextCP<4){
+      const g=CP_GATES[this.nextCP];
+      // Only count if moving forward (toward gate's track direction)
+      const fwdDot=this.vx*g.tdx+this.vy*g.tdy;
+      if(fwdDot>0&&segCross(this.px,this.py,this.x,this.y,g.lx,g.ly,g.rx,g.ry)){
+        this.nextCP++;
+      }
     }
-    if(this.nextCP>=4 && this.pp>.88 && prog<.12) {
-      this.lap++; this.nextCP=0;
-      if(this.isP){ beep(660,.08); setTimeout(()=>beep(880,.2),100); }
+    // Lap complete: cross finish line after ALL 4 checkpoints
+    if(this.nextCP>=4&&FINISH_GATE){
+      const f=FINISH_GATE;
+      const fwdDot=this.vx*f.tdx+this.vy*f.tdy;
+      if(fwdDot>0&&segCross(this.px,this.py,this.x,this.y,f.lx,f.ly,f.rx,f.ry)){
+        this.lap++; this.nextCP=0;
+        if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
+      }
     }
-    this.pp=prog;
-    this.total=this.lap+prog;
+    // Store previous position for next frame's gate detection
+    this.px=this.x; this.py=this.y;
+    this.total=this.lap+tProg(this.x,this.y);
   }
 
-  draw(cx, cam, SC) {
-    const sx=(this.x-cam.x)*SC+CW/2, sy=(this.y-cam.y)*SC+CH/2;
+  draw(cx,cam,SC){
+    const sx=(this.x-cam.x)*SC+CW/2,sy=(this.y-cam.y)*SC+CH/2;
     const def=this.def;
     const bw=(def.body==='wide'?1.15:def.body==='long'?.88:1)*17*SC;
     const bh=(def.body==='tall'?1.08:def.body==='low'?.9:1)*30*SC;
@@ -609,55 +608,42 @@ class Car {
     cx.globalAlpha=0.2; cx.fillStyle='#000';
     cx.beginPath(); cx.ellipse(2,3,bw*.62,bh*.24,0,0,Math.PI*2); cx.fill(); cx.globalAlpha=1;
 
-    // Wheels (under body)
-    cx.fillStyle='#111';
-    const wr=bw*0.17;
+    // Wheels
+    const wr=bw*0.17; cx.fillStyle='#111';
     [[-bw*.37,-bh*.30],[bw*.37,-bh*.30],[-bw*.37,bh*.28],[bw*.37,bh*.28]].forEach(([wx,wy])=>{
       cx.beginPath(); cx.arc(wx,wy,wr,0,Math.PI*2); cx.fill();
       cx.strokeStyle='rgba(255,255,255,.18)'; cx.lineWidth=1.5; cx.stroke();
     });
 
-    // Body
-    cx.fillStyle=def.col;
-    cx.beginPath(); cx.roundRect(-bw/2,-bh/2,bw,bh,3); cx.fill();
-
-    // Metallic sheen
+    // Body + sheen
+    cx.fillStyle=def.col; cx.beginPath(); cx.roundRect(-bw/2,-bh/2,bw,bh,3); cx.fill();
     const sh=cx.createLinearGradient(-bw/2,0,bw/2,0);
-    sh.addColorStop(0,'rgba(255,255,255,0)');
-    sh.addColorStop(0.44,'rgba(255,255,255,.18)');
-    sh.addColorStop(0.56,'rgba(255,255,255,.2)');
-    sh.addColorStop(1,'rgba(0,0,0,.1)');
+    sh.addColorStop(0,'rgba(255,255,255,0)');sh.addColorStop(.44,'rgba(255,255,255,.18)');
+    sh.addColorStop(.56,'rgba(255,255,255,.2)');sh.addColorStop(1,'rgba(0,0,0,.1)');
     cx.fillStyle=sh; cx.beginPath(); cx.roundRect(-bw/2,-bh/2,bw,bh,3); cx.fill();
 
     // Cabin
-    cx.fillStyle='rgba(0,0,0,.44)';
-    cx.beginPath(); cx.roundRect(-bw*.30,-bh*.27,bw*.60,bh*.37,2); cx.fill();
+    cx.fillStyle='rgba(0,0,0,.44)'; cx.beginPath(); cx.roundRect(-bw*.30,-bh*.27,bw*.60,bh*.37,2); cx.fill();
 
     // Racing number
-    cx.fillStyle='rgba(255,255,255,.7)';
-    cx.font=`bold ${bh*0.16}px monospace`; cx.textAlign='center';
-    cx.fillText(this.num, 0, bh*0.02);
+    cx.fillStyle='rgba(255,255,255,.7)'; cx.font=`bold ${bh*0.16}px monospace`; cx.textAlign='center';
+    cx.fillText(this.num,0,bh*0.02);
 
-    // Headlights
+    // Lights
     cx.fillStyle='#ffe87a';
-    cx.fillRect(-bw/2,-bh/2,bw*.28,3.5);
-    cx.fillRect(bw/2-bw*.28,-bh/2,bw*.28,3.5);
-
-    // Tail lights
+    cx.fillRect(-bw/2,-bh/2,bw*.28,3.5); cx.fillRect(bw/2-bw*.28,-bh/2,bw*.28,3.5);
     cx.fillStyle='#ff3333';
-    cx.fillRect(-bw/2,bh/2-3.5,bw*.28,3.5);
-    cx.fillRect(bw/2-bw*.28,bh/2-3.5,bw*.28,3.5);
+    cx.fillRect(-bw/2,bh/2-3.5,bw*.28,3.5); cx.fillRect(bw/2-bw*.28,bh/2-3.5,bw*.28,3.5);
 
-    // Spoiler (wide/long bodies)
+    // Spoiler
     if(def.body==='wide'||def.body==='long'){
       cx.fillStyle=def.col2;
       cx.fillRect(-bw*.52,bh/2-1,bw*1.04,2.5);
-      cx.fillRect(-bw*.52,bh/2+1.5,bw*.1,5);
-      cx.fillRect(bw*.42,bh/2+1.5,bw*.1,5);
+      cx.fillRect(-bw*.52,bh/2+1.5,bw*.1,5); cx.fillRect(bw*.42,bh/2+1.5,bw*.1,5);
     }
 
     // NOS flame
-    if(this.isP && this.nosFlame>0.05){
+    if(this.isP&&this.nosFlame>0.05){
       const fl=this.nosFlame*bh*0.45+4;
       cx.globalAlpha=this.nosFlame*0.78; cx.fillStyle='#44aaff';
       cx.beginPath(); cx.moveTo(-bw*.16,bh/2); cx.lineTo(0,bh/2+fl); cx.lineTo(bw*.16,bh/2); cx.fill();
@@ -665,17 +651,16 @@ class Car {
       cx.beginPath(); cx.moveTo(-bw*.07,bh/2); cx.lineTo(0,bh/2+fl*.5); cx.lineTo(bw*.07,bh/2); cx.fill();
       cx.globalAlpha=1;
     }
-
     cx.restore();
 
     // Drift smoke
-    if(this.isDrifting && Math.random()<0.4)
-      addDust(this.x-Math.sin(this.a)*9, this.y+Math.cos(this.a)*9, 'rgba(210,200,185,.8)', 1);
+    if(this.isDrifting&&Math.random()<0.4)
+      addDust(this.x-Math.sin(this.a)*9,this.y+Math.cos(this.a)*9,'rgba(210,200,185,.8)',1);
 
-    // Player name tag
-    if(this.isP && S.name){
+    // Name tag
+    if(this.isP&&S.name){
       cx.fillStyle='rgba(255,255,255,.6)'; cx.font='7px monospace'; cx.textAlign='center';
-      cx.fillText(S.name, sx, sy-bh*0.75);
+      cx.fillText(S.name,sx,sy-bh*0.75);
     }
   }
 }
