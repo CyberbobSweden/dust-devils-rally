@@ -35,6 +35,8 @@ canvas{display:block}
 <script>
 // ─── VERSION ────────────────────────────────────────────────────────────────
 const VERSION='v4.0.0';
+// Hoisted globals for activateTrack
+var TREES=[],MRKS=[],TRACKS_ROCKS=[],TRK_BUILT=false;
 
 // ─── FIREBASE CONFIG ─────────────────────────────────────────────────────────
 // 1. Go to https://console.firebase.google.com
@@ -184,9 +186,9 @@ const ALL_TRACKS=[
 ];
 
 // Active track state
-let TNAME='',TSUB='',TGRASS='',TD1='',TD2='',TEDGE='',TTC=[],TRACKS_ROCKS=[];
-let RAW=ALL_TRACKS[0].raw;
-const RSTEPS=ALL_TRACKS[0].steps;let TW=ALL_TRACKS[0].tw;
+let TNAME='',TSUB='',TGRASS='',TD1='',TD2='',TEDGE='',TTC=[];
+var RAW=ALL_TRACKS[0].raw;
+const RSTEPS=ALL_TRACKS[0].steps;var TW=ALL_TRACKS[0].tw;
 
 function switchTrack(idx){
   const t=ALL_TRACKS[Math.min(idx,ALL_TRACKS.length-1)];
@@ -238,12 +240,12 @@ function tProg(x,y){let m=Infinity,mi=0;for(let i=0;i<TN;i++){const dx=TRK[i].x-
 // Seeded PRNG for consistent tree placement
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
 const RNG=mulberry32(1337);
-const TREES=[];
+TREES=[];
 for(let i=0;i<130;i++){
   const x=60+RNG()*1620,y=20+RNG()*960;
   if(nearD2(x,y)>(TW+48)*(TW+48))TREES.push({x,y,r:8+RNG()*12,g:Math.floor(RNG()*3)});
 }
-const MRKS=[];
+var MRKS=[];
 for(let i=0;i<TN;i+=14){
   const t=TRK[i],n=TRK[(i+1)%TN];
   let dx=n.x-t.x,dy=n.y-t.y,ln=Math.sqrt(dx*dx+dy*dy)||1;dx/=ln;dy/=ln;
@@ -471,7 +473,7 @@ function doCollisions(){
 let camRot=0, camShake=0, camSX=0, camSY=0, cpFlashTime=0;
 
 // ─── PRECOMPUTE CHECKPOINT GATES ─────────────────────────────────────────────
-const CP_GATES=(()=>{
+var CP_GATES=(()=>{
   const CPS=[.22,.44,.66,.88];
   return CPS.map(fr=>{
     const idx=Math.floor(fr*TN);
