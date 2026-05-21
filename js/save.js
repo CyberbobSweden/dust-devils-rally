@@ -3,7 +3,8 @@ let S = {
   name:'', coins:0,
   unlocked:['banger'], selected:'banger',
   unlockedTracks:[0], currentTrack:0,
-  bestTimes:{}, scores:[]
+  bestTimes:{}, scores:[],
+  pid: Math.random().toString(36).slice(2,10) // unique device ID, generated once
 };
 
 function loadSave() {
@@ -31,6 +32,7 @@ async function fbSave(entry) {
         pos:  entry.pos,
         car:  entry.car,
         track:entry.track,
+        pid:  S.pid,        // device ID — ties score to device, not just name
         ts:   Date.now()
       })
     });

@@ -193,10 +193,8 @@ function drawLeaderboard(cx){
     cx.fillText(t, CW/2-72+i*76+35, 55);
   });
 
-  // Reload + Reset buttons
+  // Reload button (global tab only)
   if(lbTab===0){ btn(cx,CW-58,57,46,18,'rgba(255,255,255,.14)','rgba(255,255,255,.3)'); cx.fillStyle='rgba(255,255,255,.5)'; cx.font='9px monospace'; cx.textAlign='center'; cx.fillText('↻ RELOAD',CW-35,69); }
-  btn(cx,8,57,72,18,'rgba(255,60,60,.2)','rgba(255,100,100,.3)');
-  cx.fillStyle='rgba(255,160,160,.8)'; cx.font='8px monospace'; cx.textAlign='center'; cx.fillText('RESET SCORES',44,69);
 
   const rowH=36, startY=82;
   const scores = lbTab===0 ? (globalScores||[]) : S.scores;
@@ -222,7 +220,7 @@ function drawLeaderboard(cx){
     const y=startY+i*rowH, mc=['#ffdd22','#aaaaaa','#cc8844'][i]||'rgba(255,255,255,.55)';
     const mm=Math.floor(s.time/60), sec=String(Math.floor(s.time%60)).padStart(2,'0'), ms=String(Math.floor((s.time%1)*100)).padStart(2,'0');
     const sfx=['ST','ND','RD'][s.pos-1]||'TH';
-    const isMe=s.name===S.name;
+    const isMe = s.pid ? s.pid===S.pid : s.name===S.name;
     if(isMe){cx.fillStyle='rgba(255,221,51,.07)';cx.fillRect(8,y-14,CW-16,rowH-2);}
     cx.fillStyle=mc; cx.font=(i<3?'bold ':'')+String(i<3?13:12)+'px monospace';
     cx.textAlign='left'; cx.fillText((i+1)+'. '+s.name+(isMe?' ◄':''), 22, y);
@@ -240,11 +238,6 @@ function leaderboardClick(mx,my){
     if(mx>=CW/2+4&&mx<=CW/2+78) lbTab=1;
   }
   if(lbTab===0&&mx>=CW-58&&mx<=CW-12&&my>=57&&my<=75){globalScores=null;fbLoad();}
-  if(mx>=8&&mx<=80&&my>=57&&my<=75){
-    S.scores=[];S.bestTimes={};doSave();
-    if(FB_URL) fbReset();
-    beep(200,.08,.2,'sawtooth');
-  }
 }
 
 // ─── RESULTS ─────────────────────────────────────────────────────────────────
