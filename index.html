@@ -875,6 +875,25 @@ function drawMinimap(cx, cars) {
   cx.restore();
 }
 
+// ─── PLAYER INDICATOR (arrow + glow when full-track view) ───────────────────
+function drawPlayerIndicator(cx, pl, cam, SC){
+  if(!pl) return;
+  const sx=(pl.x-cam.x)*SC+CW/2, sy=(pl.y-cam.y)*SC+CH/2;
+  // Pulsing glow ring
+  const pulse=0.6+0.4*Math.sin(Date.now()*.006);
+  cx.globalAlpha=0.5*pulse;
+  cx.strokeStyle=pl.def.col;
+  cx.lineWidth=2.5;
+  cx.beginPath();cx.arc(sx,sy,16*SC,0,Math.PI*2);cx.stroke();
+  cx.globalAlpha=1;
+  // Arrow pointing in car direction above car
+  const ar=18*SC, ax=sx+Math.sin(pl.a)*(-ar-6), ay=sy-Math.cos(pl.a)*(-ar-6);
+  cx.save();cx.translate(ax,ay);cx.rotate(pl.a);
+  cx.fillStyle=pl.def.col;
+  cx.beginPath();cx.moveTo(0,-8);cx.lineTo(5,4);cx.lineTo(-5,4);cx.closePath();cx.fill();
+  cx.restore();
+}
+
 // ─── HUD ─────────────────────────────────────────────────────────────────────
 function drawHUD(cx, pl, cars, raceT) {
   if(!pl) return;
@@ -1711,12 +1730,13 @@ function loop(now){
       drawTrack(G,cam,SC);
       drawParts(G,cam,SC);
       [...cars].sort((a,b)=>a.y-b.y).forEach(c=>c.draw(G,cam,SC));
+      drawPlayerIndicator(G,cars[0],cam,SC);
       G.restore();
 
       drawVignette(G);
       if(state==='racing') drawSpeedLines(G, cars[0].speed(), cars[0].def.top);
       if(state==='racing') drawDriftPops(G,cam,SC);
-      drawMinimap(G, cars);
+      // minimap hidden in full-track view
       drawHUD(G, cars[0], cars, raceT);
       drawCtrl(G, ctrlL, ctrlR, ctrlN, ctrlB, cars[0], raceT);
 
