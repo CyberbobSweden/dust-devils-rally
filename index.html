@@ -839,61 +839,6 @@ function drawTrack(cx, cam, SC) {
   cx.restore();
 }
 
-// ─── MINIMAP ─────────────────────────────────────────────────────────────────
-function drawMinimap(cx, cars) {
-  const land=CW>CH, mw=land?90:76, mh=land?72:60;
-  const mx=CW-mw-10, my=land?56:12;
-  cx.save();
-  cx.fillStyle='rgba(0,0,0,.52)';
-  cx.beginPath(); cx.roundRect(mx,my,mw,mh,5); cx.fill();
-  cx.strokeStyle='rgba(255,255,255,.14)'; cx.lineWidth=1; cx.stroke();
-
-  let xn=Infinity,xx=-Infinity,yn=Infinity,yx=-Infinity;
-  for(const p of TRK){xn=Math.min(xn,p.x);xx=Math.max(xx,p.x);yn=Math.min(yn,p.y);yx=Math.max(yx,p.y);}
-  const ms=Math.min(mw/(xx-xn),mh/(yx-yn))*.82;
-  const ox=mx+(mw-(xx-xn)*ms)/2, oy=my+(mh-(yx-yn)*ms)/2;
-  const tp=p=>({x:ox+(p.x-xn)*ms, y:oy+(p.y-yn)*ms});
-
-  cx.beginPath();
-  let pt=tp(TRK[0]); cx.moveTo(pt.x,pt.y);
-  for(const p of TRK){pt=tp(p); cx.lineTo(pt.x,pt.y);}
-  cx.closePath(); cx.strokeStyle=TDEF.d1; cx.lineWidth=4.5; cx.stroke();
-
-  // CP dots
-  CP_GATES.forEach((g,i)=>{
-    const cp=tp(g), passed=cars[0]&&cars[0].nextCP>i;
-    cx.fillStyle=passed?'rgba(40,255,90,.7)':'rgba(255,200,40,.5)';
-    cx.beginPath(); cx.arc(cp.x,cp.y,2.5,0,Math.PI*2); cx.fill();
-  });
-
-  // Car dots
-  for(const c of cars){
-    const cp=tp(c);
-    cx.fillStyle=c.isP?'#fff':c.def.col;
-    cx.beginPath(); cx.arc(cp.x,cp.y,c.isP?3.5:2.5,0,Math.PI*2); cx.fill();
-  }
-  cx.restore();
-}
-
-// ─── PLAYER INDICATOR (arrow + glow when full-track view) ───────────────────
-function drawPlayerIndicator(cx, pl, cam, SC){
-  if(!pl) return;
-  const sx=(pl.x-cam.x)*SC+CW/2, sy=(pl.y-cam.y)*SC+CH/2;
-  // Pulsing glow ring
-  const pulse=0.6+0.4*Math.sin(Date.now()*.006);
-  cx.globalAlpha=0.5*pulse;
-  cx.strokeStyle=pl.def.col;
-  cx.lineWidth=2.5;
-  cx.beginPath();cx.arc(sx,sy,16*SC,0,Math.PI*2);cx.stroke();
-  cx.globalAlpha=1;
-  // Arrow pointing in car direction above car
-  const ar=18*SC, ax=sx+Math.sin(pl.a)*(-ar-6), ay=sy-Math.cos(pl.a)*(-ar-6);
-  cx.save();cx.translate(ax,ay);cx.rotate(pl.a);
-  cx.fillStyle=pl.def.col;
-  cx.beginPath();cx.moveTo(0,-8);cx.lineTo(5,4);cx.lineTo(-5,4);cx.closePath();cx.fill();
-  cx.restore();
-}
-
 // ─── HUD ─────────────────────────────────────────────────────────────────────
 function drawHUD(cx, pl, cars, raceT) {
   if(!pl) return;
