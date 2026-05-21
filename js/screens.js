@@ -1,4 +1,9 @@
 // ─── SHARED SCREEN HELPERS ───────────────────────────────────────────────────
+// Responsive font size: scales with short side of screen
+function sf(px){ return Math.round(px * Math.max(1, Math.min(CW,CH)/380)) + 'px monospace'; }
+// Is this a small phone screen?
+function isPhone(){ return Math.min(CW,CH) < 480; }
+
 function btn(cx,x,y,w,h,bg,stroke,lw=1){
   cx.fillStyle=bg; cx.beginPath(); cx.roundRect(x,y,w,h,5); cx.fill();
   cx.strokeStyle=stroke; cx.lineWidth=lw; cx.stroke();
@@ -14,9 +19,9 @@ function drawMenu(cx) {
   cx.fillStyle='rgba(0,0,0,.7)'; cx.fillRect(0,0,CW,CH);
   cx.textAlign='center';
 
-  cx.fillStyle='#ffdd33'; cx.font='bold 30px monospace'; cx.fillText('DUST DEVILS',CW/2,CH*.17);
-  cx.fillStyle='#ff8822'; cx.font='bold 22px monospace'; cx.fillText('RALLY',CW/2,CH*.17+36);
-  cx.fillStyle='#ffdd22'; cx.font='bold 13px monospace'; cx.fillText('$'+S.coins+' coins',CW/2,CH*.17+62);
+  cx.fillStyle='#ffdd33'; cx.font='bold '+sf(30); cx.fillText('DUST DEVILS',CW/2,CH*.17);
+  cx.fillStyle='#ff8822'; cx.font='bold '+sf(22); cx.fillText('RALLY',CW/2,CH*.17+36);
+  cx.fillStyle='#ffdd22'; cx.font='bold '+sf(13); cx.fillText('$'+S.coins+' coins',CW/2,CH*.17+62);
   if(S.name){ cx.fillStyle='rgba(255,255,255,.38)'; cx.font='11px monospace'; cx.fillText('Welcome back, '+S.name+'!',CW/2,CH*.17+80); }
   cx.fillStyle='rgba(255,200,100,.45)'; cx.font='9px monospace';
   cx.fillText('Track: '+(TDEF?TDEF.name:''), CW/2, CH*.17+98);
@@ -25,7 +30,7 @@ function drawMenu(cx) {
     const by=CH*.46+i*50, hl=(menuSel===i);
     btn(cx,CW/2-128,by-22,256,40,hl?'rgba(255,221,51,.16)':'rgba(255,255,255,.06)',hl?'#ffdd33':'rgba(255,255,255,.18)',hl?2:1);
     cx.fillStyle=hl?'#ffdd33':'rgba(255,255,255,.7)';
-    cx.font=(hl?'bold ':'')+' 14px monospace'; cx.fillText(label,CW/2,by+5);
+    cx.font=(hl?'bold ':'')+sf(14); cx.fillText(label,CW/2,by+5);
   });
 
   cx.textAlign='right'; cx.fillStyle='rgba(255,255,255,.22)'; cx.font='9px monospace';
@@ -53,8 +58,10 @@ function drawTrackSelect(cx){
   cx.textAlign='left'; cx.fillStyle='rgba(255,255,255,.38)'; cx.font='11px monospace'; cx.fillText('< BACK',12,33);
   cx.textAlign='center'; cx.fillStyle='#ffdd33'; cx.font='bold 18px monospace'; cx.fillText('SELECT TRACK',CW/2,33);
 
-  const n=ALL_TRACKS.length, cols=CW>CH?Math.min(n,5):Math.min(n,2);
-  const cW=Math.min(190,(CW-20)/cols-10), cH=185, sx=(CW-(cW+10)*cols)/2;
+  const n=ALL_TRACKS.length;
+  const cols=isPhone()?2:CW>CH?Math.min(n,5):Math.min(n,2);
+  const cW=Math.min(isPhone()?220:190,(CW-20)/cols-10);
+  const cH=isPhone()?200:185, sx=(CW-(cW+10)*cols)/2;
   if(!S.unlockedTracks) S.unlockedTracks=[0];
 
   ALL_TRACKS.forEach((t,i)=>{
@@ -84,10 +91,10 @@ function drawTrackSelect(cx){
     cx.restore();
 
     cx.textAlign='center';
-    cx.fillStyle=unlocked?'#fff':'rgba(255,255,255,.3)'; cx.font='bold 11px monospace'; cx.fillText(t.name,cx2+cW/2,cy2+cH-52);
-    cx.fillStyle='rgba(255,255,255,.35)'; cx.font='8px monospace'; cx.fillText(t.sub,cx2+cW/2,cy2+cH-39);
-    if(bt){const bm=Math.floor(bt/60),bs=String(Math.floor(bt%60)).padStart(2,'0'),bms=String(Math.floor((bt%1)*100)).padStart(2,'0');cx.fillStyle='#88ffaa';cx.font='9px monospace';cx.fillText('Best: '+bm+':'+bs+'.'+bms,cx2+cW/2,cy2+cH-24);}
-    if(!unlocked&&i>0){cx.fillStyle='rgba(255,180,50,.5)';cx.font='8px monospace';cx.fillText('Finish track '+(i)+' to unlock',cx2+cW/2,cy2+cH-24);}
+    cx.fillStyle=unlocked?'#fff':'rgba(255,255,255,.3)'; cx.font='bold '+sf(11); cx.fillText(t.name,cx2+cW/2,cy2+cH-52);
+    cx.fillStyle='rgba(255,255,255,.35)'; cx.font=sf(9); cx.fillText(t.sub,cx2+cW/2,cy2+cH-39);
+    if(bt){const bm=Math.floor(bt/60),bs=String(Math.floor(bt%60)).padStart(2,'0'),bms=String(Math.floor((bt%1)*100)).padStart(2,'0');cx.fillStyle='#88ffaa';cx.font=sf(10);cx.fillText('Best: '+bm+':'+bs+'.'+bms,cx2+cW/2,cy2+cH-24);}
+    if(!unlocked&&i>0){cx.fillStyle='rgba(255,180,50,.5)';cx.font=sf(9);cx.fillText('Finish track '+(i)+' to unlock',cx2+cW/2,cy2+cH-24);}
 
     const bY=cy2+cH-13;
     if(sel){ btn(cx,cx2+8,bY-12,cW-16,18,'rgba(255,220,50,.3)','#ffdd33'); cx.fillStyle='#ffdd33'; cx.font='bold 8px monospace'; cx.fillText('SELECTED ✓',cx2+cW/2,bY+1); }
@@ -96,8 +103,10 @@ function drawTrackSelect(cx){
 }
 function trackSelectClick(mx,my){
   if(mx<90&&my<52){state='menu';return;}
-  const n=ALL_TRACKS.length, cols=CW>CH?Math.min(n,5):Math.min(n,2);
-  const cW=Math.min(190,(CW-20)/cols-10), cH=185, sx=(CW-(cW+10)*cols)/2;
+  const n=ALL_TRACKS.length;
+  const cols=isPhone()?2:CW>CH?Math.min(n,5):Math.min(n,2);
+  const cW=Math.min(isPhone()?220:190,(CW-20)/cols-10);
+  const cH=isPhone()?200:185, sx=(CW-(cW+10)*cols)/2;
   if(!S.unlockedTracks) S.unlockedTracks=[0];
   ALL_TRACKS.forEach((_,i)=>{
     const col=i%cols, row=Math.floor(i/cols);
@@ -116,8 +125,10 @@ function drawGarage(cx){
   cx.textAlign='center'; cx.fillStyle='#ffdd33'; cx.font='bold 18px monospace'; cx.fillText('GARAGE',CW/2,33);
   cx.textAlign='right'; cx.fillStyle='#ffee44'; cx.font='bold 13px monospace'; cx.fillText('$'+S.coins,CW-12,33);
 
-  const cols=CW>CH?Math.min(5,CAR_DEFS.length):3;
-  const cW=Math.min(148,(CW-16)/cols-8), cH=200, sX=(CW-(cW+8)*cols)/2;
+  // Fewer cols on small screens so text is readable
+  const cols=isPhone()?2:CW>CH?Math.min(5,CAR_DEFS.length):3;
+  const cW=Math.min(isPhone()?200:148,(CW-16)/cols-8);
+  const cH=isPhone()?220:200, sX=(CW-(cW+8)*cols)/2;
 
   CAR_DEFS.forEach((def,i)=>{
     const col=i%cols, row=Math.floor(i/cols);
@@ -141,8 +152,8 @@ function drawGarage(cx){
     cx.restore();
 
     cx.textAlign='center';
-    cx.fillStyle=owned?'#fff':'rgba(255,255,255,.35)'; cx.font='bold 10px monospace'; cx.fillText(def.name,cx2+cW/2,cy2+80);
-    cx.fillStyle='rgba(255,255,255,.28)'; cx.font='8px monospace';
+    cx.fillStyle=owned?'#fff':'rgba(255,255,255,.35)'; cx.font='bold '+sf(10); cx.fillText(def.name,cx2+cW/2,cy2+80);
+    cx.fillStyle='rgba(255,255,255,.28)'; cx.font=sf(8);
     let line='', ly2=cy2+92;
     def.desc.split(' ').forEach(w=>{const test=line+w+' ';if(cx.measureText(test).width>cW-10&&line){cx.fillText(line.trim(),cx2+cW/2,ly2);line=w+' ';ly2+=11;}else line=test;});
     cx.fillText(line.trim(),cx2+cW/2,ly2);
@@ -152,19 +163,21 @@ function drawGarage(cx){
       const sy=cy2+115+si*17, bx=cx2+8;
       cx.fillStyle='rgba(255,255,255,.14)'; cx.fillRect(bx,sy,cW-16,5);
       cx.fillStyle=def.col; cx.fillRect(bx,sy,(cW-16)*Math.min(1,val),5);
-      cx.fillStyle='rgba(255,255,255,.42)'; cx.font='7px monospace'; cx.textAlign='left'; cx.fillText(lbl,bx,sy-1);
+      cx.fillStyle='rgba(255,255,255,.42)'; cx.font=sf(8); cx.textAlign='left'; cx.fillText(lbl,bx,sy-1);
     });
 
     const bY=cy2+cH-24, bX=cx2+8, bW=cW-16; cx.textAlign='center';
-    if(sel){ btn(cx,bX,bY,bW,18,'rgba(255,220,50,.28)','#ffdd33'); cx.fillStyle='#ffdd33'; cx.font='bold 8px monospace'; cx.fillText('SELECTED ✓',cx2+cW/2,bY+12); }
-    else if(owned){ btn(cx,bX,bY,bW,18,'rgba(100,210,100,.22)','rgba(100,200,100,.4)'); cx.fillStyle='#88ff88'; cx.font='bold 8px monospace'; cx.fillText('SELECT',cx2+cW/2,bY+12); }
-    else { const can=S.coins>=def.price; btn(cx,bX,bY,bW,18,can?'rgba(255,200,50,.22)':'rgba(80,80,80,.22)',can?'#ffdd33':'rgba(130,130,130,.3)'); cx.fillStyle=can?'#ffdd33':'rgba(130,130,130,.5)'; cx.font='bold 8px monospace'; cx.fillText('BUY $'+def.price,cx2+cW/2,bY+12); }
+    if(sel){ btn(cx,bX,bY,bW,18,'rgba(255,220,50,.28)','#ffdd33'); cx.fillStyle='#ffdd33'; cx.font='bold '+sf(9); cx.fillText('SELECTED ✓',cx2+cW/2,bY+12); }
+    else if(owned){ btn(cx,bX,bY,bW,18,'rgba(100,210,100,.22)','rgba(100,200,100,.4)'); cx.fillStyle='#88ff88'; cx.font='bold '+sf(9); cx.fillText('SELECT',cx2+cW/2,bY+12); }
+    else { const can=S.coins>=def.price; btn(cx,bX,bY,bW,18,can?'rgba(255,200,50,.22)':'rgba(80,80,80,.22)',can?'#ffdd33':'rgba(130,130,130,.3)'); cx.fillStyle=can?'#ffdd33':'rgba(130,130,130,.5)'; cx.font='bold '+sf(9); cx.fillText('BUY $'+def.price,cx2+cW/2,bY+12); }
   });
 }
 function garageClick(mx,my){
   if(mx<90&&my<52){state='menu';return;}
-  const cols=CW>CH?Math.min(5,CAR_DEFS.length):3;
-  const cW=Math.min(148,(CW-16)/cols-8), cH=200, sX=(CW-(cW+8)*cols)/2;
+  // Fewer cols on small screens so text is readable
+  const cols=isPhone()?2:CW>CH?Math.min(5,CAR_DEFS.length):3;
+  const cW=Math.min(isPhone()?200:148,(CW-16)/cols-8);
+  const cH=isPhone()?220:200, sX=(CW-(cW+8)*cols)/2;
   CAR_DEFS.forEach((def,i)=>{
     const col=i%cols, row=Math.floor(i/cols);
     const cx2=sX+col*(cW+8), cy2=60+row*(cH+10);
