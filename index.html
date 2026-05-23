@@ -85,8 +85,7 @@ canvas { display: block; }
 <body>
   <div id="rotate"><span>&#8635;</span>Rotate to landscape!</div>
   <div id="nscreen">
-    <p>DUST DEVILS RALLY</p>
-    <p class="sub">Enter your racer name</p>
+    <p>DUST DEVILS RALLY</p><p class="sub">Enter your racer name</p>
     <input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
     <button id="nbtn">START RACING!</button>
   </div>
@@ -94,6 +93,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
+const BUILD = '20260523.1509'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -148,42 +148,42 @@ function seededRng(seed){
 
 // ─── TRACK DEFINITIONS ───────────────────────────────────────────────────────
 const ALL_TRACKS=[
-  {name:'DUST DEVILS',  sub:'Classic dirt rally circuit',
+  {name:'DUST DEVILS',laps:3,  sub:'Classic dirt rally circuit',
    steps:18,tw:100,grass:'#3d7830',d1:'#b87840',d2:'#cc9060',edge:'#604520',
    tc:['#267020','#388030','#1e5418'],
    raw:[{x:450,y:880},{x:760,y:880},{x:1060,y:880},{x:1310,y:760},{x:1490,y:540},
         {x:1530,y:300},{x:1380,y:140},{x:1120,y:130},{x:870,y:100},{x:620,y:155},
         {x:390,y:290},{x:250,y:490},{x:220,y:710},{x:310,y:840}]},
 
-  {name:'STONE PASS',   sub:'Tight mountain hairpins',
+  {name:'STONE PASS',laps:3,   sub:'Tight mountain hairpins',
    steps:16,tw:82,grass:'#2a5520',d1:'#888878',d2:'#aaaaaa',edge:'#404040',
    tc:['#1e4418','#2a5c20','#163010'],
    raw:[{x:400,y:760},{x:660,y:760},{x:920,y:720},{x:1100,y:600},{x:1180,y:430},
         {x:1140,y:270},{x:980,y:165},{x:760,y:145},{x:560,y:190},{x:390,y:320},
         {x:290,y:490},{x:250,y:650},{x:290,y:740}]},
 
-  {name:'DESERT STORM', sub:'Wide open high-speed blast',
+  {name:'DESERT STORM',laps:3, sub:'Wide open high-speed blast',
    steps:18,tw:118,grass:'#c4a040',d1:'#d4885e',d2:'#e8a078',edge:'#a04c28',
    tc:['#a8822a','#c0a040','#907030'],
    raw:[{x:300,y:810},{x:650,y:830},{x:1000,y:820},{x:1360,y:740},{x:1660,y:580},
         {x:1820,y:360},{x:1760,y:160},{x:1480,y:60},{x:1100,y:50},{x:750,y:110},
         {x:460,y:230},{x:250,y:440},{x:190,y:660},{x:220,y:780}]},
 
-  {name:'GRAVEL PIT',   sub:'Tight quarry hairpins',
+  {name:'GRAVEL PIT',laps:4,   sub:'Tight quarry hairpins',
    steps:15,tw:80,grass:'#6a5838',d1:'#907855',d2:'#a88e68',edge:'#4a3820',
    tc:['#7a6040','#684e2c','#564018'],
    raw:[{x:380,y:680},{x:620,y:680},{x:840,y:640},{x:980,y:500},{x:960,y:340},
         {x:840,y:210},{x:660,y:170},{x:480,y:210},{x:350,y:340},{x:300,y:500},
         {x:330,y:620}]},
 
-  {name:'COASTAL RUN',  sub:'Sweeping high-speed coast',
+  {name:'COASTAL RUN',laps:3,  sub:'Sweeping high-speed coast',
    steps:20,tw:122,grass:'#3a7848',d1:'#c8a055',d2:'#dab86a',edge:'#6a4c18',
    tc:['#2a7038','#3a8848','#1e5828'],
    raw:[{x:220,y:880},{x:580,y:900},{x:960,y:880},{x:1340,y:820},{x:1680,y:660},
         {x:1880,y:440},{x:1840,y:220},{x:1580,y:80},{x:1200,y:50},{x:820,y:90},
         {x:480,y:220},{x:260,y:440},{x:160,y:680},{x:180,y:800}]},
 
-  {name:'GRAND CIRCUIT', sub:'Long technical masterclass',
+  {name:'GRAND CIRCUIT',laps:2, sub:'Long technical masterclass',
    steps:22,tw:105,grass:'#2e6028',d1:'#b08050',d2:'#c89068',edge:'#5a3818',
    tc:['#246020','#306828','#1a4c18'],
    raw:[{x:300,y:900},{x:650,y:920},{x:1050,y:910},{x:1450,y:860},{x:1800,y:720},
@@ -267,7 +267,7 @@ function activateTrack(idx){
 
 // Tracks 7 & 8 appended to ALL_TRACKS at runtime (to keep file clean)
 ALL_TRACKS.push(
-  {name:'SNAKE PIT',    sub:'Brutal S-curves and zig-zags',
+  {name:'SNAKE PIT',laps:3,    sub:'Brutal S-curves and zig-zags',
    steps:18,tw:88,grass:'#304828',d1:'#808868',d2:'#989e80',edge:'#384028',
    tc:['#1e3818','#2a4820','#142810'],
    raw:[{x:400,y:800},{x:700,y:820},{x:900,y:720},{x:1050,y:560},{x:900,y:400},
@@ -275,7 +275,7 @@ ALL_TRACKS.push(
         {x:1350,y:360},{x:1200,y:520},{x:1050,y:640},{x:1200,y:780},{x:1050,y:900},
         {x:800,y:950},{x:550,y:900},{x:400,y:850}]},
 
-  {name:'FIGURE EIGHT',  sub:'Double loop with crossing',
+  {name:'FIGURE EIGHT',laps:3,  sub:'Double loop with crossing',
    steps:20,tw:92,grass:'#2a3a40',d1:'#787a70',d2:'#909080',edge:'#3a3830',
    tc:['#1a2c30','#243a40','#162028'],
    raw:[{x:680,y:480},{x:850,y:380},{x:1050,y:280},{x:1250,y:300},{x:1380,y:440},
@@ -286,7 +286,7 @@ ALL_TRACKS.push(
 
 // Additional long tracks
 ALL_TRACKS.push(
-  {name:'ALPINE PASS',   sub:'Long mountain epic — 18 corners',
+  {name:'ALPINE PASS',laps:2,   sub:'Long mountain epic — 18 corners',
    steps:22,tw:90,grass:'#1e3c18',d1:'#909888',d2:'#a8b0a0',edge:'#484840',
    tc:['#163010','#1e3c18','#0e2008'],
    raw:[{x:400,y:900},{x:700,y:920},{x:1000,y:880},{x:1280,y:780},{x:1480,y:620},
@@ -295,7 +295,7 @@ ALL_TRACKS.push(
         {x:1100,y:380},{x:1020,y:220},{x:820,y:200},{x:640,y:320},{x:520,y:520},
         {x:400,y:680},{x:340,y:820}]},
 
-  {name:'GRAND PRIX',    sub:'Full-length championship circuit',
+  {name:'GRAND PRIX',laps:2,    sub:'Full-length championship circuit',
    steps:24,tw:108,grass:'#2a4a1c',d1:'#787068',d2:'#908880',edge:'#403830',
    tc:['#1c3014','#28421c','#142010'],
    raw:[{x:300,y:880},{x:650,y:900},{x:1050,y:890},{x:1420,y:840},{x:1750,y:720},
@@ -636,6 +636,7 @@ class Car{
       const lapTime=raceTime-this.lapStart;
       if(lapTime>10&&this.pp>0.82&&prog<0.18){
         this.lap++; this.nextCP=0; this.lapStart=raceTime;
+        this.pp=0.02; // prevent immediate re-trigger in seam zone
         if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
       }
     }
@@ -805,28 +806,37 @@ function drawTrack(cx, cam, SC) {
     cx.fill();
   }
 
-  // Checkpoint gates — coloured bands across track
+  // Checkpoint flags — small flags on both sides of track, no lines across
   const pl=cars[0]||null;
   CP_GATES.forEach((g,i)=>{
-    const passed = pl && pl.nextCP>i;
-    cx.save();
-    cx.translate(g.cx, g.cy);
-    cx.rotate(Math.atan2(g.tdy, g.tdx)); // perpendicular to track
-    const hw=g.hw;
-    cx.fillStyle=passed?'rgba(30,220,70,.2)':'rgba(255,200,40,.14)';
-    cx.fillRect(-11,-hw,22,hw*2);
-    cx.strokeStyle=passed?'rgba(30,230,80,.7)':'rgba(255,210,40,.6)';
-    cx.lineWidth=6;
-    cx.beginPath(); cx.moveTo(0,-hw); cx.lineTo(0,hw); cx.stroke();
-    cx.strokeStyle=passed?'rgba(30,255,80,.85)':'rgba(255,215,40,.8)';
-    cx.lineWidth=4;
-    cx.beginPath(); cx.moveTo(-9,-8); cx.lineTo(0,8); cx.lineTo(9,-8); cx.stroke();
-    cx.restore();
-    if(!passed){
-      cx.fillStyle='rgba(255,215,40,.75)';
-      cx.font='bold 18px monospace'; cx.textAlign='center';
-      cx.fillText(i+1, g.cx+g.nx*(TW+24), g.cy+g.ny*(TW+24));
-    }
+    const passed=pl&&pl.nextCP>i;
+    const col=passed?'#44ff88':'#ffdd22';
+    const colD=passed?'rgba(20,160,60,.85)':'rgba(200,160,0,.85)';
+    [-1,1].forEach(side=>{
+      const px=g.cx+g.nx*side*(TW*0.82), py=g.cy+g.ny*side*(TW*0.82);
+      cx.save(); cx.translate(px,py);
+      // pole shadow
+      cx.strokeStyle='rgba(0,0,0,.25)'; cx.lineWidth=2.5;
+      cx.beginPath(); cx.moveTo(1.5,13); cx.lineTo(1.5,-19); cx.stroke();
+      // pole
+      cx.strokeStyle='rgba(220,220,220,.9)'; cx.lineWidth=2;
+      cx.beginPath(); cx.moveTo(0,13); cx.lineTo(0,-19); cx.stroke();
+      // flag shadow
+      cx.fillStyle='rgba(0,0,0,.2)';
+      cx.beginPath(); cx.moveTo(1,-18); cx.lineTo(side*15+1,-12); cx.lineTo(1,-6); cx.closePath(); cx.fill();
+      // flag
+      cx.fillStyle=colD;
+      cx.beginPath(); cx.moveTo(0,-18); cx.lineTo(side*14,-12); cx.lineTo(0,-6); cx.closePath(); cx.fill();
+      cx.fillStyle=col;
+      cx.globalAlpha=0.85;
+      cx.beginPath(); cx.moveTo(0,-17); cx.lineTo(side*12,-12); cx.lineTo(0,-7); cx.closePath(); cx.fill();
+      cx.globalAlpha=1;
+      // number
+      if(!passed){ cx.fillStyle='rgba(0,0,0,.75)'; cx.font='bold 6px monospace'; cx.textAlign='center'; cx.fillText(i+1,side*6,-11); }
+      // base
+      cx.fillStyle='rgba(0,0,0,.35)'; cx.beginPath(); cx.ellipse(0,13,4,1.5,0,0,Math.PI*2); cx.fill();
+      cx.restore();
+    });
   });
 
   cx.restore();
@@ -850,7 +860,8 @@ function drawHUD(cx, pl, cars, raceT) {
 
   // Lap
   cx.fillStyle='#fff'; cx.font='bold 15px monospace'; cx.textAlign='center';
-  cx.fillText('LAP '+Math.min(pl.lap+1,LAPS)+'/'+LAPS, CW/2, land?28:29);
+  const _laps=TDEF&&TDEF.laps?TDEF.laps:LAPS;
+  cx.fillText('LAP '+Math.min(pl.lap+1,_laps)+'/'+_laps, CW/2, land?28:29);
 
   // Track name
   cx.fillStyle='rgba(255,220,100,.45)'; cx.font='9px monospace';
@@ -1677,7 +1688,7 @@ function loop(now){
         cam.x+=(tx-cam.x)*.13; cam.y+=(ty-cam.y)*.13;
         // Shake decay
         camShake*=0.80; camSX=(Math.random()-.5)*camShake; camSY=(Math.random()-.5)*camShake;
-        if(pl.lap>=LAPS) finishRace();
+        if(pl.lap>=(TDEF&&TDEF.laps?TDEF.laps:LAPS)) finishRace();
       }
 
       // World draw (with shake)
