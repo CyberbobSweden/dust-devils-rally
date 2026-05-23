@@ -1,13 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#111">
-  <title>Dust Devils Rally</title>
+  <meta name="theme-color" content="#111"><title>Dust Devils Rally</title>
   <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -80,20 +77,16 @@ canvas { display: block; }
   #rotate { display: flex; }
 }
 
-  </style>
-</head>
-<body>
+  </style></head><body>
   <div id="rotate"><span>&#8635;</span>Rotate to landscape!</div>
-  <div id="nscreen">
-    <p>DUST DEVILS RALLY</p><p class="sub">Enter your racer name</p>
+  <div id="nscreen"><p>DUST DEVILS RALLY</p><p class="sub">Enter your racer name</p>
     <input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
-    <button id="nbtn">START RACING!</button>
-  </div>
+    <button id="nbtn">START RACING!</button></div>
   <canvas id="c"></canvas>
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260523.1528'; // auto-updated each build
+const BUILD = '20260523.1741'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -515,8 +508,7 @@ function doCollisions(cars){
   }
 }
 
-// ─── SEGMENT CROSSING (for checkpoint detection) ─────────────────────────────
-// Returns true if segment (ax,ay)→(bx,by) crosses segment (cx,cy)→(dx,dy)
+// ─── SEGMENT CROSSING ────────────────────────────────────────────────────────
 function segCross(ax,ay,bx,by,cx,cy,dx,dy){
   function side(ox,oy,ux,uy,vx,vy){return(ux-ox)*(vy-oy)-(uy-oy)*(vx-ox);}
   const d1=side(cx,cy,dx,dy,ax,ay),d2=side(cx,cy,dx,dy,bx,by);
@@ -524,19 +516,114 @@ function segCross(ax,ay,bx,by,cx,cy,dx,dy){
   return((d1>0&&d2<0)||(d1<0&&d2>0))&&((d3>0&&d4<0)||(d3<0&&d4>0));
 }
 
-// ─── CAR CLASS ───────────────────────────────────────────────────────────────
+// ─── PIXEL ART CAR MAPS (8 wide × 16 tall) ───────────────────────────────────
+// B=body, C=col2, W=white, K=black, G=gray, R=red, Y=yellow, .=transparent
+const CAR_MAPS={
+  std:[   // BANGER — rally hatchback
+    "..YYYY..",
+    "KWWWWWWK",
+    "KBBBBBBK",
+    "KBWWWWBK",
+    "KBKBBKBK",
+    "KBKBBKBK",
+    "KBBBBBBK",
+    "KBWWWWBK",
+    "KBWWWWBK",
+    "KBBBBBBK",
+    "KBKBBKBK",
+    "KBKBBKBK",
+    "KBWWWWBK",
+    "KWWWWWWK",
+    "KRRRRRRK",
+    "..BBBB..",
+  ],
+  low:[   // TURBO HATCH — sporty
+    "..WWWW..",
+    "KWWWWWWK",
+    "KBBBBBBK",
+    "KBBBBBBK",
+    "KBKBBKBK",
+    "KBKBBKBK",
+    "KBKBBKBK",
+    "KBBBBBBK",
+    "KBCCCCBK",
+    "KBBBBBBK",
+    "KBKBBKBK",
+    "KBKBBKBK",
+    "KBBBBBBK",
+    "KWWWWWWK",
+    "KRRRRRRK",
+    "..CCCC..",
+  ],
+  tall:[  // RALLY BEAST — lifted SUV
+    "KYYYYYYK",
+    "KWWWWWWK",
+    "KGBBBBBK",
+    "KGKBBKGK",
+    "KGKBBKGK",
+    "KGBBBBBK",
+    "KBBBBBBK",
+    "KBBBBBBK",
+    "KBBBBBBK",
+    "KBBBBBBK",
+    "KGBBBBBK",
+    "KGKBBKGK",
+    "KGKBBKGK",
+    "KGBBBBBK",
+    "KWWWWWWK",
+    "KRRRRRRK",
+  ],
+  wide:[  // DRIFT KING — wide sports
+    "CWWWWWWC",
+    "CWWWWWWC",
+    "KWWWWWWK",
+    "KBBBBBBK",
+    "KBKBBKBK",
+    "KBKBBKBK",
+    "KBBBBBBK",
+    "KBCBBCBK",
+    "KBCBBCBK",
+    "KBBBBBBK",
+    "KBKBBKBK",
+    "KBKBBKBK",
+    "KBBBBBBK",
+    "CWWWWWWC",
+    "CWWWWWWC",
+    "CRRRRRRC",
+  ],
+  long:[  // MUSCLE CAR → F1 formula style!
+    "KBBBBBBK",
+    "CWWWWWWC",
+    "...BB...",
+    "..KBBK..",
+    "..KBBK..",
+    "..KBBK..",
+    "..KKKK..",
+    "..KWWK..",
+    "..KBBK..",
+    "..KBBK..",
+    "..KBBK..",
+    "...BB...",
+    "...BB...",
+    "....B...",
+    "....K...",
+    "........",
+  ],
+};
+
+// ─── CAR CLASS ────────────────────────────────────────────────────────────────
 class Car{
   constructor(x,y,angle,defId,isPlayer){
     this.x=x; this.y=y; this.a=angle;
-    this.px=x; this.py=y; // previous position (for gate crossing detection)
+    this.px=x; this.py=y;
     this.def=CAR_DEFS.find(c=>c.id===defId)||CAR_DEFS[0];
     this.isP=isPlayer;
     this.sp=0; this.vx=0; this.vy=0;
     this._prevA=angle;
     this.nos=isPlayer?100:55;
     this.lap=0; this.nextCP=0; this.total=0;
-    this.wentOff=false; this.lapStart=0; this.pp=0;
-    this.aiI=0; this.aiM=0.68+Math.random()*0.28;
+    this.wentOff=false; this.lapStart=0; this.pp=0; this._lapCD=0;
+    this.aiI=0; this.aiM=0.68+Math.random()*0.28; this.aiReact=1;
     this.driftAng=0; this.isDrifting=false; this._combo=0;
     this.skidTrail=[]; this.nosFlame=0;
     this.num=Math.floor(Math.random()*98)+1;
@@ -546,8 +633,6 @@ class Car{
 
   update(dt,L,R,brake,nos,raceTime){
     const def=this.def;
-
-    // ── Controls ─────────────────────────────────────────────────────────────
     if(this.isP){
       const maxSp=(nos&&this.nos>0)?def.top*def.nos:def.top;
       this.sp=Math.min(this.sp+def.acc*dt,maxSp);
@@ -563,13 +648,13 @@ class Car{
       const want=Math.atan2(dx,-dy);
       let diff=want-this.a;
       while(diff>Math.PI)diff-=Math.PI*2; while(diff<-Math.PI)diff+=Math.PI*2;
-      const reactRate=this.aiReact||1.0;
+      const reactRate=this.aiReact||1;
       this.a+=Math.sign(diff)*Math.min(Math.abs(diff),3.2*reactRate*dt);
       if(dist<95) this.aiI=(this.aiI+9)%TN;
       this.sp+=(320*this.aiM-this.sp)*2.2*dt;
     }
 
-    // ── Real drift physics ────────────────────────────────────────────────────
+    // Drift physics
     const turnRate=Math.abs(this.a-this._prevA)/Math.max(dt,0.001);
     this._prevA=this.a;
     const spFrac=Math.min(1,Math.abs(this.sp)/Math.max(def.top,1));
@@ -579,35 +664,27 @@ class Car{
     const desVX=Math.sin(this.a)*this.sp,desVY=-Math.cos(this.a)*this.sp;
     this.vx+=(desVX-this.vx)*gf; this.vy+=(desVY-this.vy)*gf;
 
-    // ── Off-track slowdown ────────────────────────────────────────────────────
+    // Off-track
     this.off=nearD2(this.x,this.y)>TW*TW;
-    if(this.off){
-      this.wentOff=true;
-      const pen=Math.pow(0.07,dt);
-      this.sp*=pen; this.vx*=pen; this.vy*=pen;
-    }
+    if(this.off){this.wentOff=true;const pen=Math.pow(0.07,dt);this.sp*=pen;this.vx*=pen;this.vy*=pen;}
 
-    // ── Move ─────────────────────────────────────────────────────────────────
     this.x+=this.vx*dt; this.y+=this.vy*dt;
 
-    // ── Hard boundary — can't drive too far from track ────────────────────────
+    // Hard boundary
     const dSq=nearD2(this.x,this.y);
     const maxD=TW*2.2;
     if(dSq>maxD*maxD){
-      // Find nearest track point
       let mi=0,md=Infinity;
       for(let i=0;i<TN;i++){const dx=TRK[i].x-this.x,dy=TRK[i].y-this.y,d=dx*dx+dy*dy;if(d<md){md=d;mi=i;}}
       const dist=Math.sqrt(md);
       const nx=(TRK[mi].x-this.x)/dist,ny=(TRK[mi].y-this.y)/dist;
-      // Push back to boundary
       this.x+=nx*(dist-maxD); this.y+=ny*(dist-maxD);
-      // Kill outward velocity component
       const outward=this.vx*(-nx)+this.vy*(-ny);
       if(outward>0){this.vx+=nx*outward*1.8;this.vy+=ny*outward*1.8;}
       this.sp*=0.15;
     }
 
-    // ── Drift angle ───────────────────────────────────────────────────────────
+    // Drift angle
     const velA=Math.atan2(this.vx,-this.vy);
     let da=velA-this.a;
     while(da>Math.PI)da-=Math.PI*2; while(da<-Math.PI)da+=Math.PI*2;
@@ -622,34 +699,32 @@ class Car{
       this._combo=0;
     }
 
-    // ── ANTI-CHEAT: checkpoints via physical gate crossing ───────────────────
+    // Checkpoints (physical crossing, no direction check)
     if(this.nextCP<4){
       const g=CP_GATES[this.nextCP];
-      if(segCross(this.px,this.py,this.x,this.y,g.lx,g.ly,g.rx,g.ry)){
-        this.nextCP++;
-      }
+      if(segCross(this.px,this.py,this.x,this.y,g.lx,g.ly,g.rx,g.ry)) this.nextCP++;
     }
-    // Lap complete: progress wraps 0.85→0.15 AND all 4 checkpoints done AND min 10s
-    const prog=tProg(this.x,this.y);
-    // Lap complete: physically cross finish gate after all 4 CPs, with 5s cooldown
-    if(this.nextCP>=4 && FINISH_GATE && raceTime-(this._lapCD||0)>5){
+    // Lap: physical finish gate + 2s cooldown
+    if(this.nextCP>=4&&FINISH_GATE&&raceTime-this._lapCD>2){
       const f=FINISH_GATE;
       if(segCross(this.px,this.py,this.x,this.y,f.lx,f.ly,f.rx,f.ry)){
-        this.lap++; this.nextCP=0;
-        this._lapCD=raceTime; // 5s cooldown blocks seam-zone re-trigger
+        this.lap++; this.nextCP=0; this._lapCD=raceTime;
         if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
       }
     }
     this.px=this.x; this.py=this.y;
-    this.pp=prog;
-    this.total=this.lap+prog;
+    this.pp=tProg(this.x,this.y);
+    this.total=this.lap+this.pp;
   }
 
   draw(cx,cam,SC){
-    const sx=(this.x-cam.x)*SC+CW/2,sy=(this.y-cam.y)*SC+CH/2;
+    const sx=(this.x-cam.x)*SC+CW/2, sy=(this.y-cam.y)*SC+CH/2;
     const def=this.def;
-    const bw=(def.body==='wide'?1.15:def.body==='long'?.88:1)*17*SC;
-    const bh=(def.body==='tall'?1.08:def.body==='low'?.9:1)*30*SC;
+    const COLS=8, ROWS=16;
+    const scl=(def.body==='wide'?1.15:def.body==='long'?.75:def.body==='tall'?1.08:def.body==='low'?.9:1);
+    const px=Math.max(1.5, Math.round(Math.min(17*SC*scl/COLS*1.4, 30*SC*scl/ROWS*1.2)));
+    const dW=px*COLS, dH=px*ROWS;
+    const x0=-dW/2, y0=-dH/2;
 
     // Skid marks
     if(this.skidTrail.length>1){
@@ -657,7 +732,7 @@ class Car{
       for(let i=1;i<this.skidTrail.length;i++){
         const p=this.skidTrail[i],q=this.skidTrail[i-1];
         const age=(now-p.t)/3500; if(age>1)continue;
-        cx.globalAlpha=(1-age)*0.2; cx.strokeStyle='#2a1a08'; cx.lineWidth=SC*6; cx.lineCap='round';
+        cx.globalAlpha=(1-age)*0.2; cx.strokeStyle='#2a1a08'; cx.lineWidth=Math.max(SC,0.5)*6; cx.lineCap='round';
         cx.beginPath();
         cx.moveTo((q.x-cam.x)*SC+CW/2,(q.y-cam.y)*SC+CH/2);
         cx.lineTo((p.x-cam.x)*SC+CW/2,(p.y-cam.y)*SC+CH/2);
@@ -669,62 +744,73 @@ class Car{
     cx.save(); cx.translate(sx,sy); cx.rotate(this.a);
 
     // Shadow
-    cx.globalAlpha=0.2; cx.fillStyle='#000';
-    cx.beginPath(); cx.ellipse(2,3,bw*.62,bh*.24,0,0,Math.PI*2); cx.fill(); cx.globalAlpha=1;
+    cx.globalAlpha=0.22; cx.fillStyle='#000';
+    cx.beginPath(); cx.ellipse(px*.5,px,dW*.52,dH*.14,0,0,Math.PI*2); cx.fill(); cx.globalAlpha=1;
 
-    // Wheels
-    const wr=bw*0.17; cx.fillStyle='#111';
-    [[-bw*.37,-bh*.30],[bw*.37,-bh*.30],[-bw*.37,bh*.28],[bw*.37,bh*.28]].forEach(([wx,wy])=>{
-      cx.beginPath(); cx.arc(wx,wy,wr,0,Math.PI*2); cx.fill();
-      cx.strokeStyle='rgba(255,255,255,.18)'; cx.lineWidth=1.5; cx.stroke();
-    });
+    // Tires — before body so body overlaps
+    const isF1=def.body==='long';
+    const tr=isF1?px*1.6:px*1.4;
+    const tires=isF1
+      ? [{x:-dW*.68,y:dH*.14},{x:dW*.68,y:dH*.14},{x:-dW*.62,y:-dH*.2},{x:dW*.62,y:-dH*.2}]
+      : [{x:-dW*.44,y:-dH*.28},{x:dW*.44,y:-dH*.28},{x:-dW*.44,y:dH*.24},{x:dW*.44,y:dH*.24}];
 
-    // Body + sheen
-    cx.fillStyle=def.col; cx.beginPath(); cx.roundRect(-bw/2,-bh/2,bw,bh,3); cx.fill();
-    const sh=cx.createLinearGradient(-bw/2,0,bw/2,0);
-    sh.addColorStop(0,'rgba(255,255,255,0)');sh.addColorStop(.44,'rgba(255,255,255,.18)');
-    sh.addColorStop(.56,'rgba(255,255,255,.2)');sh.addColorStop(1,'rgba(0,0,0,.1)');
-    cx.fillStyle=sh; cx.beginPath(); cx.roundRect(-bw/2,-bh/2,bw,bh,3); cx.fill();
+    for(const t of tires){
+      cx.globalAlpha=0.28; cx.fillStyle='#000';
+      cx.beginPath(); cx.ellipse(t.x+1.5,t.y+1.5,tr,tr*.75,0,0,Math.PI*2); cx.fill(); cx.globalAlpha=1;
+      cx.fillStyle='#181818';
+      cx.beginPath(); cx.arc(t.x,t.y,tr,0,Math.PI*2); cx.fill();
+      // Tread pattern
+      cx.fillStyle='#2a2a2a';
+      for(let a=0;a<6;a++){
+        const ang=a*Math.PI/3;
+        cx.beginPath(); cx.arc(t.x+Math.cos(ang)*tr*.6,t.y+Math.sin(ang)*tr*.6,tr*.22,0,Math.PI*2); cx.fill();
+      }
+      // Rim
+      cx.fillStyle='#666'; cx.beginPath(); cx.arc(t.x,t.y,tr*.48,0,Math.PI*2); cx.fill();
+      cx.fillStyle='#999'; cx.beginPath(); cx.arc(t.x,t.y,tr*.28,0,Math.PI*2); cx.fill();
+      cx.fillStyle='#444'; cx.beginPath(); cx.arc(t.x,t.y,tr*.12,0,Math.PI*2); cx.fill();
+    }
 
-    // Cabin
-    cx.fillStyle='rgba(0,0,0,.44)'; cx.beginPath(); cx.roundRect(-bw*.30,-bh*.27,bw*.60,bh*.37,2); cx.fill();
+    // Pixel car body
+    const col={B:def.col,C:def.col2,W:'#ffffff',K:'#111111',G:'#888888',R:'#ff3322',Y:'#ffee77'};
+    const map=CAR_MAPS[def.body]||CAR_MAPS.std;
+    cx.imageSmoothingEnabled=false;
+    for(let r=0;r<map.length;r++){
+      for(let c=0;c<map[r].length;c++){
+        const ch=map[r][c];
+        if(ch==='.') continue;
+        cx.fillStyle=col[ch]||'#f0f';
+        cx.fillRect(Math.round(x0+c*px), Math.round(y0+r*px), px, px);
+      }
+    }
 
     // Racing number
-    cx.fillStyle='rgba(255,255,255,.7)'; cx.font=`bold ${bh*0.16}px monospace`; cx.textAlign='center';
-    cx.fillText(this.num,0,bh*0.02);
-
-    // Lights
-    cx.fillStyle='#ffe87a';
-    cx.fillRect(-bw/2,-bh/2,bw*.28,3.5); cx.fillRect(bw/2-bw*.28,-bh/2,bw*.28,3.5);
-    cx.fillStyle='#ff3333';
-    cx.fillRect(-bw/2,bh/2-3.5,bw*.28,3.5); cx.fillRect(bw/2-bw*.28,bh/2-3.5,bw*.28,3.5);
-
-    // Spoiler
-    if(def.body==='wide'||def.body==='long'){
-      cx.fillStyle=def.col2;
-      cx.fillRect(-bw*.52,bh/2-1,bw*1.04,2.5);
-      cx.fillRect(-bw*.52,bh/2+1.5,bw*.1,5); cx.fillRect(bw*.42,bh/2+1.5,bw*.1,5);
-    }
+    const numSize=Math.max(7,px*1.8);
+    cx.font=`bold ${numSize}px monospace`; cx.textAlign='center';
+    const numY=isF1?px*-2.5:px*-1.5;
+    cx.fillStyle='rgba(0,0,0,.65)'; cx.fillText(this.num,1,numY+1);
+    cx.fillStyle='rgba(255,255,255,.9)'; cx.fillText(this.num,0,numY);
 
     // NOS flame
     if(this.isP&&this.nosFlame>0.05){
-      const fl=this.nosFlame*bh*0.45+4;
-      cx.globalAlpha=this.nosFlame*0.78; cx.fillStyle='#44aaff';
-      cx.beginPath(); cx.moveTo(-bw*.16,bh/2); cx.lineTo(0,bh/2+fl); cx.lineTo(bw*.16,bh/2); cx.fill();
-      cx.globalAlpha=0.35; cx.fillStyle='#fff';
-      cx.beginPath(); cx.moveTo(-bw*.07,bh/2); cx.lineTo(0,bh/2+fl*.5); cx.lineTo(bw*.07,bh/2); cx.fill();
+      const fl=this.nosFlame*dH*.35+px*2;
+      cx.globalAlpha=this.nosFlame*.85; cx.fillStyle='#44aaff';
+      cx.beginPath(); cx.moveTo(-px,dH/2); cx.lineTo(0,dH/2+fl); cx.lineTo(px,dH/2); cx.fill();
+      cx.globalAlpha=.4; cx.fillStyle='#fff';
+      cx.beginPath(); cx.moveTo(-px*.4,dH/2); cx.lineTo(0,dH/2+fl*.55); cx.lineTo(px*.4,dH/2); cx.fill();
       cx.globalAlpha=1;
     }
+
     cx.restore();
 
     // Drift smoke
     if(this.isDrifting&&Math.random()<0.4)
       addDust(this.x-Math.sin(this.a)*9,this.y+Math.cos(this.a)*9,'rgba(210,200,185,.8)',1);
 
-    // Name tag
+    // Player name tag
     if(this.isP&&S.name){
       cx.fillStyle='rgba(255,255,255,.6)'; cx.font='7px monospace'; cx.textAlign='center';
-      cx.fillText(S.name,sx,sy-bh*0.75);
+      cx.fillText(S.name,sx,sy-dH/2*SC*.6);
     }
   }
 }
@@ -1729,6 +1815,4 @@ function loop(now){
 }
 requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(loop); });
 
-  </script>
-</body>
-</html>
+  </script></body></html>
