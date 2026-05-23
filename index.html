@@ -84,7 +84,7 @@ canvas { display: block; }
   <canvas id="c"></canvas><script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260523.2330'; // auto-updated each build
+const BUILD = '20260523.2343'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -832,7 +832,7 @@ class Car{
     const spr=CAR_SPRITES[def.body]||CAR_SPRITES.std;
     if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
       cx.imageSmoothingEnabled=false;
-      cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,x0,y0,dW,dH);
+      cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,x0,y0+dH,dW,-dH); // flip: front of sprite is at bottom
     }else{
       // Fallback solid block if image not loaded
       cx.fillStyle=def.col;cx.fillRect(x0,y0,dW,dH);
@@ -881,7 +881,7 @@ class Car{
     const spr=CAR_SPRITES[def.body]||CAR_SPRITES.std;
     if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
       cx.imageSmoothingEnabled=false;
-      cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,x0,y0,dW,dH);
+      cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,x0,y0+dH,dW,-dH); // flip: front of sprite is at bottom
     }
     cx.restore();cx.globalAlpha=1;
   }
@@ -1524,7 +1524,7 @@ function drawGarage(cx){
     const _spr=CAR_SPRITES[def.body]||CAR_SPRITES.std;
     if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
       cx.imageSmoothingEnabled=false;
-      cx.drawImage(CAR_SHEET,_spr.sx,_spr.sy,_spr.sw,_spr.sh,-_sprW/2,-_sprH/2,_sprW,_sprH);
+      cx.drawImage(CAR_SHEET,_spr.sx,_spr.sy,_spr.sw,_spr.sh,-_sprW/2,_sprH/2,_sprW,-_sprH);
     }else{
       cx.fillStyle=def.col;cx.fillRect(-_sprW/2,-_sprH/2,_sprW,_sprH);
     }
