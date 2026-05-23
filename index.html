@@ -86,7 +86,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260523.2251'; // auto-updated each build
+const BUILD = '20260523.2259'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1298,9 +1298,10 @@ function drawMenu(cx){
 }
 
 function menuClick(mx,my){
-  const btnH=Math.min(42,Math.floor((CH*.84-CH*.45)/4));
+  // MUST match drawMenu calculations exactly
+  const btnH=Math.min(42,Math.floor((CH*.88-CH*.56)/4));
   const btnW=Math.min(260,CW*.55);
-  const menuTop=CH*.44;
+  const menuTop=CH*.57;
   const gap=(CH*.87-menuTop-btnH*MENU_ITEMS.length)/(MENU_ITEMS.length-1);
   MENU_ITEMS.forEach((_,i)=>{
     const by=menuTop+i*(btnH+gap);
