@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-  <meta charset="UTF-8">
+<html lang="en"><head><meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -82,11 +81,10 @@ canvas { display: block; }
   <div id="nscreen"><p>DUST DEVILS RALLY</p><p class="sub">Enter your racer name</p>
     <input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
     <button id="nbtn">START RACING!</button></div>
-  <canvas id="c"></canvas>
-  <script>
+  <canvas id="c"></canvas><script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260523.2322'; // auto-updated each build
+const BUILD = '20260523.2330'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -584,8 +582,11 @@ function doCollisions(cars){
         b.vx-=imp*nx; b.vy-=imp*ny;
         a.sp=a.vx*Math.sin(a.a)-a.vy*Math.cos(a.a);
         b.sp=b.vx*Math.sin(b.a)-b.vy*Math.cos(b.a);
-        beep(110+Math.random()*70,.13,.25,'sawtooth');
-        camShake=3;
+        // Only sound+shake when player involved
+        if(a.isP||b.isP){
+          beep(110+Math.random()*70,.13,.25,'sawtooth');
+          camShake=3;
+        }
         const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
         for(let k=0;k<5;k++) addDust(mx,my,'#ffcc44',1);
       }
