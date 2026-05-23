@@ -93,7 +93,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260523.1518'; // auto-updated each build
+const BUILD = '20260523.1528'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -631,11 +631,14 @@ class Car{
     }
     // Lap complete: progress wraps 0.85→0.15 AND all 4 checkpoints done AND min 10s
     const prog=tProg(this.x,this.y);
-    // Lap complete: all 4 CPs + progress wraps + min 15s cooldown between laps
-    if(this.nextCP>=4 && this.pp>0.82 && prog<0.18 && raceTime-(this._lapCD||0)>15){
-      this.lap++; this.nextCP=0;
-      this._lapCD=raceTime; // cooldown: ignore next 15s
-      if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
+    // Lap complete: physically cross finish gate after all 4 CPs, with 5s cooldown
+    if(this.nextCP>=4 && FINISH_GATE && raceTime-(this._lapCD||0)>5){
+      const f=FINISH_GATE;
+      if(segCross(this.px,this.py,this.x,this.y,f.lx,f.ly,f.rx,f.ry)){
+        this.lap++; this.nextCP=0;
+        this._lapCD=raceTime; // 5s cooldown blocks seam-zone re-trigger
+        if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
+      }
     }
     this.px=this.x; this.py=this.y;
     this.pp=prog;
