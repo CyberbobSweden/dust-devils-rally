@@ -535,7 +535,7 @@ class Car{
     this._prevA=angle;
     this.nos=isPlayer?100:55;
     this.lap=0; this.nextCP=0; this.total=0;
-    this.wentOff=false; this.lapStart=0;
+    this.wentOff=false; this.lapStart=0; this.pp=0;
     this.aiI=0; this.aiM=0.68+Math.random()*0.28;
     this.driftAng=0; this.isDrifting=false; this._combo=0;
     this.skidTrail=[]; this.nosFlame=0;
@@ -622,30 +622,26 @@ class Car{
       this._combo=0;
     }
 
-    // ── ANTI-CHEAT: physical gate line crossing, forward direction only ───────
-    // Car must physically cross each gate line in the correct direction
+    // ── ANTI-CHEAT: checkpoints via physical gate crossing ───────────────────
     if(this.nextCP<4){
       const g=CP_GATES[this.nextCP];
-      // Only count if moving forward (toward gate's track direction)
       const fwdDot=this.vx*g.tdx+this.vy*g.tdy;
       if(fwdDot>0&&segCross(this.px,this.py,this.x,this.y,g.lx,g.ly,g.rx,g.ry)){
         this.nextCP++;
       }
     }
-    // Lap complete: cross finish line after ALL 4 checkpoints
-    if(this.nextCP>=4&&FINISH_GATE){
-      const f=FINISH_GATE;
-      const fwdDot=this.vx*f.tdx+this.vy*f.tdy;
+    // Lap complete: progress wraps 0.85→0.15 AND all 4 checkpoints done AND min 10s
+    const prog=tProg(this.x,this.y);
+    if(this.nextCP>=4){
       const lapTime=raceTime-this.lapStart;
-      // Anti-cheat: lap must take at least 10 seconds
-      if(lapTime>10&&fwdDot>0&&segCross(this.px,this.py,this.x,this.y,f.lx,f.ly,f.rx,f.ry)){
+      if(lapTime>10&&this.pp>0.82&&prog<0.18){
         this.lap++; this.nextCP=0; this.lapStart=raceTime;
         if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
       }
     }
-    // Store previous position for next frame's gate detection
     this.px=this.x; this.py=this.y;
-    this.total=this.lap+tProg(this.x,this.y);
+    this.pp=prog;
+    this.total=this.lap+prog;
   }
 
   draw(cx,cam,SC){
@@ -903,6 +899,11 @@ function drawHUD(cx, pl, cars, raceT) {
     cx.fillStyle='rgba(255,90,0,.7)'; cx.font='bold 12px monospace'; cx.textAlign='center';
     cx.fillText('! OFF TRACK !', CW/2, land?bH+18:72);
   }
+  // Exit/pause button top-right
+  cx.fillStyle='rgba(0,0,0,.45)'; cx.beginPath(); cx.roundRect(CW-46,6,38,32,5); cx.fill();
+  cx.strokeStyle='rgba(255,255,255,.25)'; cx.lineWidth=1; cx.stroke();
+  cx.fillStyle='rgba(255,255,255,.7)'; cx.font='bold 13px monospace'; cx.textAlign='center';
+  cx.fillText('✕', CW-27, 27);
 }
 
 // ─── TOUCH CONTROLS ───────────────────────────────────────────────────────────
@@ -1502,6 +1503,7 @@ C.addEventListener('touchstart',e=>{
   const t=e.changedTouches[0];
   if(state==='garage') scrollTouchStart('garage',t.clientY);
   else if(state==='tracks') scrollTouchStart('tracks',t.clientY);
+  if(state==='racing'||state==='countdown') raceClick(t.clientX,t.clientY);
   if(state==='menu')        menuClick(t.clientX,t.clientY);
   else if(state==='leaderboard') leaderboardClick(t.clientX,t.clientY);
   else if(state==='results') resultsClick(t.clientX,t.clientY);
@@ -1529,6 +1531,7 @@ C.addEventListener('click',e=>{
   else if(state==='tracks')      trackSelectClick(e.clientX,e.clientY);
   else if(state==='leaderboard') leaderboardClick(e.clientX,e.clientY);
   else if(state==='results')     resultsClick(e.clientX,e.clientY);
+  else if(state==='racing'||state==='countdown') raceClick(e.clientX,e.clientY);
 });
 window.addEventListener('keydown',e=>{
   initAudio();
@@ -1547,6 +1550,7 @@ window.addEventListener('keydown',e=>{
     }
   }
   if(['garage','tracks','leaderboard'].includes(state)&&(e.key==='Escape'||e.key==='Backspace')) state='menu';
+  if((state==='racing'||state==='countdown')&&e.key==='Escape'){ stopEngine(); setScreech(false); state='menu'; }
   if(state==='results'){ if(e.key==='Enter') startRace(); if(e.key==='Escape') state='menu'; }
 });
 window.addEventListener('keyup',e=>{
@@ -1579,6 +1583,13 @@ function setupRace(){
   return { pl, ai, cam:{x:t0.x,y:t0.y} };
 }
 
+function raceClick(mx,my){
+  // Exit button top-right corner
+  if(mx>=CW-46&&mx<=CW-8&&my>=6&&my<=38){
+    stopEngine(); setScreech(false);
+    state='menu';
+  }
+}
 function startRace(){
   const g=setupRace();
   cars=[g.pl,...g.ai];
