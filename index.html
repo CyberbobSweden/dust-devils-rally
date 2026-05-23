@@ -7,39 +7,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Dust Devils Rally">
   <meta name="theme-color" content="#111">
-  <title>Dust Devils Rally</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-  <div id="rotate">
-    <span>&#8635;</span>
-    Rotate to landscape for best experience!
-  </div>
-
-  <div id="nscreen">
-    <p>DUST DEVILS RALLY</p>
-    <p class="sub">Enter your racer name</p>
-    <input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
-    <button id="nbtn">START RACING!</button>
-  </div>
-
-  <canvas id="c"></canvas>
-
-  <!-- Load order matters: each file can use globals from files before it -->
-  <script src="js/config.js"></script>
-  <script src="js/tracks.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/save.js"></script>
-  <script src="js/particles.js"></script>
-  <script src="js/car.js"></script>
-  <script src="js/render.js"></script>
-  <script src="js/screens.js"></script>
-  <script src="js/game.js"></script>
-
-</body>
-</html>
-<style>
+  <title>Dust Devils Rally v4.3.0</title>
+  <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
@@ -114,8 +83,13 @@ canvas { display: block; }
   </style>
 </head>
 <body>
-  <div id="rotate"><span>&#8635;</span>Rotate!</div>
-  <div id="nscreen"><p>DUST DEVILS RALLY</p><p class="sub">Enter your racer name</p><input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off"><button id="nbtn">START RACING!</button></div>
+  <div id="rotate"><span>&#8635;</span>Rotate to landscape!</div>
+  <div id="nscreen">
+    <p>DUST DEVILS RALLY</p>
+    <p class="sub">Enter your racer name</p>
+    <input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
+    <button id="nbtn">START RACING!</button>
+  </div>
   <canvas id="c"></canvas>
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
@@ -589,7 +563,8 @@ class Car{
       const want=Math.atan2(dx,-dy);
       let diff=want-this.a;
       while(diff>Math.PI)diff-=Math.PI*2; while(diff<-Math.PI)diff+=Math.PI*2;
-      this.a+=Math.sign(diff)*Math.min(Math.abs(diff),3.2*dt);
+      const reactRate=this.aiReact||1.0;
+      this.a+=Math.sign(diff)*Math.min(Math.abs(diff),3.2*reactRate*dt);
       if(dist<95) this.aiI=(this.aiI+9)%TN;
       this.sp+=(320*this.aiM-this.sp)*2.2*dt;
     }
@@ -1589,12 +1564,15 @@ function setupRace(){
   const sa=Math.atan2(t1.x-t0.x,-(t1.y-t0.y));
   const pl=new Car(t0.x,t0.y,sa,S.selected,true);
 
-  // 4 AI cars on a 2x2 grid behind player
+  // 4 AI cars — each with distinct skill level and car type
   const pool=['turbo','rally','drift','muscle','banger'].filter(id=>id!==S.selected);
+  const aiSkill=[0.92,0.82,0.74,0.65]; // 1st=fast, 4th=slow
   const ai=[];
   [[-1,1],[1,1],[-1,2],[1,2]].forEach(([s,row],i)=>{
     const car=new Car(t0.x-dx*55*row+nx*28*s, t0.y-dy*55*row+ny*28*s, sa, pool[i]||pool[i%pool.length]);
-    car.aiI=(i+1)*8; car.aiM=0.70+i*0.04;
+    car.aiI=(i+1)*6;
+    car.aiM=aiSkill[i]+(Math.random()-.5)*.06; // slight randomness each race
+    car.aiReact=0.8+i*0.15; // slower cars react slower to corners
     ai.push(car);
   });
 
