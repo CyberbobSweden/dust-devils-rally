@@ -93,7 +93,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260523.1509'; // auto-updated each build
+const BUILD = '20260523.1518'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -368,7 +368,7 @@ function stopEngine(){
 
 function setScreech(on){
   if(on===_scrOn)return; _scrOn=on;
-  if(!AC)return;
+  if(!AC){_scrOn=false;return;}
   if(on){
     const buf=AC.createBuffer(1,AC.sampleRate*0.2,AC.sampleRate);
     const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
@@ -378,7 +378,7 @@ function setScreech(on){
     scrSrc.connect(f);f.connect(g);g.connect(AC.destination);
     g.gain.value=0.055; scrSrc.start();
   }else{
-    if(scrSrc){try{scrSrc.stop();}catch(e){}scrSrc=null;}
+    if(scrSrc){try{scrSrc.stop();scrSrc.disconnect();}catch(e){}scrSrc=null;}
   }
 }
 
@@ -612,8 +612,8 @@ class Car{
     let da=velA-this.a;
     while(da>Math.PI)da-=Math.PI*2; while(da<-Math.PI)da+=Math.PI*2;
     this.driftAng=da;
-    this.isDrifting=Math.abs(da)>0.15&&Math.abs(this.sp)>80;
-    if(this.isDrifting&&Math.abs(this.sp)>90){
+    this.isDrifting=Math.abs(da)>0.22&&Math.abs(this.sp)>120;
+    if(this.isDrifting&&Math.abs(this.sp)>120){
       this.skidTrail.push({x:this.x,y:this.y,t:Date.now()});
       if(this.skidTrail.length>150) this.skidTrail.shift();
       if(this.isP) this._combo+=Math.abs(da)*Math.abs(this.sp)*dt*0.005;
@@ -625,20 +625,17 @@ class Car{
     // ── ANTI-CHEAT: checkpoints via physical gate crossing ───────────────────
     if(this.nextCP<4){
       const g=CP_GATES[this.nextCP];
-      const fwdDot=this.vx*g.tdx+this.vy*g.tdy;
-      if(fwdDot>0&&segCross(this.px,this.py,this.x,this.y,g.lx,g.ly,g.rx,g.ry)){
+      if(segCross(this.px,this.py,this.x,this.y,g.lx,g.ly,g.rx,g.ry)){
         this.nextCP++;
       }
     }
     // Lap complete: progress wraps 0.85→0.15 AND all 4 checkpoints done AND min 10s
     const prog=tProg(this.x,this.y);
-    if(this.nextCP>=4){
-      const lapTime=raceTime-this.lapStart;
-      if(lapTime>10&&this.pp>0.82&&prog<0.18){
-        this.lap++; this.nextCP=0; this.lapStart=raceTime;
-        this.pp=0.02; // prevent immediate re-trigger in seam zone
-        if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
-      }
+    // Lap complete: all 4 CPs + progress wraps + min 15s cooldown between laps
+    if(this.nextCP>=4 && this.pp>0.82 && prog<0.18 && raceTime-(this._lapCD||0)>15){
+      this.lap++; this.nextCP=0;
+      this._lapCD=raceTime; // cooldown: ignore next 15s
+      if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
     }
     this.px=this.x; this.py=this.y;
     this.pp=prog;
@@ -1056,7 +1053,7 @@ function drawMenu(cx){
   });
 
   cx.textAlign='right';cx.fillStyle='rgba(255,255,255,.22)';cx.font='9px monospace';
-  cx.fillText(VERSION,CW-8,CH-18);
+  cx.fillText(VERSION+' · '+BUILD,CW-8,CH-18);
   cx.textAlign='center';cx.fillStyle='rgba(255,200,100,.32)';cx.font='9px monospace';
   cx.fillText('Made with ❤ by Risingbob · Umeå, Sweden',CW/2,CH-6);
 }
