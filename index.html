@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Dust Devils Rally">
   <meta name="theme-color" content="#111">
-  <title>Dust Devils Rally v4.3.0</title>
+  <title>Dust Devils Rally</title>
   <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -1675,7 +1675,6 @@ function loop(now){
       drawTrack(G,cam,SC);
       drawParts(G,cam,SC);
       [...cars].sort((a,b)=>a.y-b.y).forEach(c=>c.draw(G,cam,SC));
-      drawPlayerIndicator(G,cars[0],cam,SC);
       G.restore();
 
       drawVignette(G);
