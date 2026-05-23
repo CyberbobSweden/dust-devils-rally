@@ -119,7 +119,7 @@ canvas { display: block; }
   <canvas id="c"></canvas>
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
-const VERSION = 'v4.0.0';
+const VERSION = 'v4.3.0';
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -310,6 +310,26 @@ ALL_TRACKS.push(
         {x:520,y:760},{x:660,y:640},{x:700,y:520}]}
 );
 
+// Additional long tracks
+ALL_TRACKS.push(
+  {name:'ALPINE PASS',   sub:'Long mountain epic — 18 corners',
+   steps:22,tw:90,grass:'#1e3c18',d1:'#909888',d2:'#a8b0a0',edge:'#484840',
+   tc:['#163010','#1e3c18','#0e2008'],
+   raw:[{x:400,y:900},{x:700,y:920},{x:1000,y:880},{x:1280,y:780},{x:1480,y:620},
+        {x:1560,y:420},{x:1480,y:240},{x:1320,y:120},{x:1100,y:60},{x:860,y:80},
+        {x:660,y:180},{x:520,y:340},{x:600,y:500},{x:780,y:580},{x:960,y:520},
+        {x:1100,y:380},{x:1020,y:220},{x:820,y:200},{x:640,y:320},{x:520,y:520},
+        {x:400,y:680},{x:340,y:820}]},
+
+  {name:'GRAND PRIX',    sub:'Full-length championship circuit',
+   steps:24,tw:108,grass:'#2a4a1c',d1:'#787068',d2:'#908880',edge:'#403830',
+   tc:['#1c3014','#28421c','#142010'],
+   raw:[{x:300,y:880},{x:650,y:900},{x:1050,y:890},{x:1420,y:840},{x:1750,y:720},
+        {x:1980,y:540},{x:2060,y:320},{x:1980,y:140},{x:1740,y:50},{x:1440,y:40},
+        {x:1180,y:100},{x:980,y:220},{x:840,y:380},{x:980,y:500},{x:1160,y:440},
+        {x:1260,y:280},{x:1160,y:160},{x:940,y:160},{x:780,y:300},{x:700,y:500},
+        {x:760,y:680},{x:600,y:780},{x:420,y:760},{x:300,y:860}]}
+);
 // ─── AUDIO ───────────────────────────────────────────────────────────────────
 let AC=null,_engNodes=null,scrSrc=null,_scrOn=false;
 
@@ -413,7 +433,7 @@ let globalScores=null, scoresLoading=false, scoresError=false;
 async function fbSave(entry) {
   if(!FB_URL) return;
   try {
-    await fetch(FB_URL+'/scores.json', {
+    await fetch(FB_URL+'/scores_v2.json', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -433,7 +453,7 @@ async function fbLoad() {
   if(!FB_URL){ globalScores=[]; return; }
   scoresLoading=true; scoresError=false;
   try {
-    const r=await fetch(FB_URL+'/scores.json');
+    const r=await fetch(FB_URL+'/scores_v2.json');
     const d=await r.json();
     globalScores = d
       ? Object.values(d).filter(s=>s&&typeof s.time==='number'&&s.name)
@@ -445,7 +465,7 @@ async function fbLoad() {
 
 async function fbReset() {
   if(!FB_URL) return;
-  try { await fetch(FB_URL+'/scores.json',{method:'DELETE'}); globalScores=[]; }
+  try { await fetch(FB_URL+'/scores_v2.json',{method:'DELETE'}); globalScores=[]; }
   catch(e) {}
 }
 
@@ -541,7 +561,7 @@ class Car{
     this._prevA=angle;
     this.nos=isPlayer?100:55;
     this.lap=0; this.nextCP=0; this.total=0;
-    this.wentOff=false;
+    this.wentOff=false; this.lapStart=0;
     this.aiI=0; this.aiM=0.68+Math.random()*0.28;
     this.driftAng=0; this.isDrifting=false; this._combo=0;
     this.skidTrail=[]; this.nosFlame=0;
@@ -641,8 +661,10 @@ class Car{
     if(this.nextCP>=4&&FINISH_GATE){
       const f=FINISH_GATE;
       const fwdDot=this.vx*f.tdx+this.vy*f.tdy;
-      if(fwdDot>0&&segCross(this.px,this.py,this.x,this.y,f.lx,f.ly,f.rx,f.ry)){
-        this.lap++; this.nextCP=0;
+      const lapTime=raceTime-this.lapStart;
+      // Anti-cheat: lap must take at least 10 seconds
+      if(lapTime>10&&fwdDot>0&&segCross(this.px,this.py,this.x,this.y,f.lx,f.ly,f.rx,f.ry)){
+        this.lap++; this.nextCP=0; this.lapStart=raceTime;
         if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
       }
     }
@@ -1358,7 +1380,7 @@ function drawLeaderboard(cx){
   const tid=S.currentTrack||0;
   const rawScores=lbTab===0?(globalScores||[]):S.scores;
   // Filter to current track (or show all if no track field)
-  const scores=rawScores.filter(s=>s.track===tid||s.track===undefined||s.track===null);
+  const scores=rawScores.filter(s=>s.track===tid);
 
   const rowH=Math.min(48,Math.floor((CH-96)/Math.max(scores.length,1)));
   const startY=96;
