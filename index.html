@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1149'; // auto-updated each build
+const BUILD = '20260524.1200'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1517,17 +1517,20 @@ function drawMenu(cx){
   // ── Version + credit ──────────────────────────────────────────────────────
   cx.textAlign='right';cx.fillStyle='rgba(255,255,255,.2)';cx.font='9px monospace';
   cx.fillText(VERSION+' · '+BUILD,CW-8,CH-18);
+  if(adminTaps>0){cx.fillStyle='rgba(255,100,50,.85)';cx.font='bold 11px monospace';cx.textAlign='center';cx.fillText('\u2699 '+adminTaps+'/7',CW/2,15);}
   cx.textAlign='center';cx.fillStyle='rgba(255,180,80,.3)';cx.font='9px monospace';
   cx.fillText('Made with ❤ by Risingbob · Umeå, Sweden',CW/2,CH-6);
 }
 
 function menuClick(mx,my){
-  // Secret admin trigger: tap version text (bottom-right) 7 times quickly
-  if(mx>=CW-160&&my>=CH-40){
+  // Admin trigger: tap top quarter of screen 7 times quickly
+  if(my<=CH*.25){
     const now=Date.now();
-    if(now-adminTapT>2500) adminTaps=0;
+    if(now-adminTapT>3000) adminTaps=0;
     adminTapT=now; adminTaps++;
-    if(adminTaps>=7){ adminState='signin'; adminTaps=0; beep(880,.06); return; }
+    beep(440+adminTaps*40,.04);
+    if(adminTaps>=7){ adminState='signin'; adminTaps=0; beep(880,.1); return; }
+    return;
   }
   // MUST match drawMenu calculations exactly
   const btnH=Math.min(42,Math.floor((CH*.88-CH*.56)/4));
