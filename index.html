@@ -84,7 +84,7 @@ canvas { display: block; }
   <canvas id="c"></canvas><script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1126'; // auto-updated each build
+const BUILD = '20260524.1137'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -134,6 +134,12 @@ const CAR_SPRITES={
   suv:    {sx:192,   sy:96,sw:64,sh:96},
   aero:   {sx:256,   sy:96,sw:64,sh:96},
 };
+
+// ─── ADMIN ────────────────────────────────────────────────────────────────────
+// SHA-256 hash av admin-PIN. Ändra PIN och beräkna ny hash innan deploy!
+// Nuvarande PIN: se admins
+const ADMIN_PIN_HASH='a59101aafc3e8d1fd1649a3885e8e77cd7a3ba0b80fc5b9501b3919cf0c8becc';
+const ADMIN_EMAILS=['richard.x.bostrom@gmail.com','oliver.x.bostrom@gmail.com'];
 
 // ─── SPLINE MATH ─────────────────────────────────────────────────────────────
 function crPt(a,b,c,d,t){
@@ -518,6 +524,40 @@ async function fbLoadGhost(trackIdx){
     }else ghostData=null;
   }catch(e){ghostData=null;}
   ghostLoading=false;
+}
+
+// ─── ADMIN RESET ──────────────────────────────────────────────────────────────
+let adminResetTs=0;
+
+async function fbLoadAdminReset(){
+  if(!FB_URL)return;
+  try{
+    const r=await fetch(`${FB_URL}/admin/last_reset.json`);
+    const d=await r.json();
+    if(d&&typeof d==='number') adminResetTs=d;
+  }catch(e){}
+}
+
+async function fbAdminReset(){
+  if(!FB_URL)return false;
+  try{
+    const ts=Date.now();
+    await fetch(`${FB_URL}/admin/last_reset.json`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(ts)
+    });
+    adminResetTs=ts;
+    globalScores=null;
+    await fbLoad();
+    return true;
+  }catch(e){return false;}
+}
+
+// Simple SHA-256 for PIN verification (browser built-in)
+async function sha256(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
 // ─── PARTICLES ───────────────────────────────────────────────────────────────
@@ -1216,6 +1256,111 @@ function isDragging(){return scroll._dragging;}
 const MENU_ITEMS=['▶  RACE','✦  GARAGE','⛟  TRACKS','★  LEADERBOARD'];
 let menuSel=0;
 
+
+// ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
+let adminTaps=0, adminTapT=0, adminState='off'; // off | pin | panel
+let adminPinInput='', adminMsg='';
+
+function drawAdmin(cx){
+  cx.fillStyle='rgba(0,0,0,.92)';cx.fillRect(0,0,CW,CH);
+  cx.textAlign='center';
+  cx.fillStyle='#ff4400';cx.font='bold 18px Impact,monospace';
+  cx.fillText('⚙ ADMIN PANEL',CW/2,50);
+  cx.fillStyle='rgba(255,255,255,.4)';cx.font='10px monospace';
+  cx.fillText('Only for authorised admins',CW/2,68);
+
+  if(adminState==='pin'){
+    cx.fillStyle='rgba(255,255,255,.8)';cx.font='14px monospace';
+    cx.fillText('Enter PIN:',CW/2,CH*.38);
+    // PIN display (dots)
+    const dots='●'.repeat(adminPinInput.length)+'_'.repeat(Math.max(0,6-adminPinInput.length));
+    cx.fillStyle='#ffdd33';cx.font='bold 22px monospace';
+    cx.fillText(dots,CW/2,CH*.5);
+    if(adminMsg){
+      cx.fillStyle='#ff6644';cx.font='12px monospace';
+      cx.fillText(adminMsg,CW/2,CH*.62);
+    }
+    // Numpad
+    const keys=['1','2','3','4','5','6','7','8','9','⌫','0','✓'];
+    const bw=Math.min(70,CW*.22), bh=36, gap=6;
+    const gx=CW/2-bw*1.5-gap, gy=CH*.66;
+    keys.forEach((k,i)=>{
+      const col=i%3, row=Math.floor(i/3);
+      const bx=gx+col*(bw+gap), by=gy+row*(bh+gap);
+      const special=k==='⌫'||k==='✓';
+      cx.fillStyle=special?'rgba(255,100,50,.3)':'rgba(255,255,255,.12)';
+      cx.beginPath();cx.roundRect(bx,by,bw,bh,6);cx.fill();
+      cx.strokeStyle=special?'rgba(255,100,50,.5)':'rgba(255,255,255,.2)';
+      cx.lineWidth=1;cx.stroke();
+      cx.fillStyle=special?'#ff8866':'#fff';
+      cx.font='bold 16px monospace';cx.fillText(k,bx+bw/2,by+bh*.68);
+    });
+    // Close
+    cx.fillStyle='rgba(255,255,255,.25)';cx.font='11px monospace';
+    cx.fillText('✕ close — tap here',CW/2,CH-16);
+
+  } else if(adminState==='panel'){
+    cx.fillStyle='#44ff88';cx.font='12px monospace';
+    cx.fillText('✓ Authenticated',CW/2,88);
+    // Reset global scores button
+    const bw=Math.min(260,CW*.7),bh=48,bx=CW/2-bw/2;
+    btn(cx,bx,CH*.35,bw,bh,'rgba(255,60,60,.2)','rgba(255,80,80,.6)');
+    cx.fillStyle='#ff8080';cx.font='bold 14px monospace';
+    cx.fillText('🗑 RENSA GLOBALA SCORES',CW/2,CH*.35+bh*.65);
+    cx.fillStyle='rgba(255,255,255,.35)';cx.font='10px monospace';
+    cx.fillText('Göms för alla — kan ej ångras!',CW/2,CH*.35+bh+14);
+    // Reset local
+    btn(cx,bx,CH*.62,bw,bh,'rgba(255,160,60,.15)','rgba(255,160,60,.4)');
+    cx.fillStyle='#ffaa66';cx.font='bold 14px monospace';
+    cx.fillText('🗑 RENSA MINA LOKALA SCORES',CW/2,CH*.62+bh*.65);
+    if(adminMsg){
+      cx.fillStyle=adminMsg.includes('✓')?'#44ff88':'#ff6644';
+      cx.font='bold 12px monospace';cx.fillText(adminMsg,CW/2,CH*.85);
+    }
+    cx.fillStyle='rgba(255,255,255,.25)';cx.font='11px monospace';
+    cx.fillText('✕ close — tap here',CW/2,CH-16);
+  }
+}
+
+function adminClick(mx,my){
+  if(my>CH-30){adminState='off';adminPinInput='';adminMsg='';return;} // close
+  if(adminState==='pin'){
+    // Numpad
+    const keys=['1','2','3','4','5','6','7','8','9','⌫','0','✓'];
+    const bw=Math.min(70,CW*.22),bh=36,gap=6;
+    const gx=CW/2-bw*1.5-gap,gy=CH*.66;
+    keys.forEach((k,i)=>{
+      const col=i%3,row=Math.floor(i/3);
+      const bx=gx+col*(bw+gap),by=gy+row*(bh+gap);
+      if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+bh){
+        if(k==='⌫') adminPinInput=adminPinInput.slice(0,-1);
+        else if(k==='✓') verifyAdminPin();
+        else if(adminPinInput.length<8) adminPinInput+=k;
+      }
+    });
+  } else if(adminState==='panel'){
+    const bw=Math.min(260,CW*.7),bh=48,bx=CW/2-bw/2;
+    if(mx>=bx&&mx<=bx+bw){
+      if(my>=CH*.35&&my<=CH*.35+bh){
+        adminMsg='Rensar...';
+        fbAdminReset().then(ok=>{adminMsg=ok?'✓ Globala scores rensade!':'✗ Fel — kolla Firebase-regler';});
+      }
+      if(my>=CH*.62&&my<=CH*.62+bh){
+        S.scores=[];doSave();adminMsg='✓ Lokala scores rensade!';beep(440,.1);
+      }
+    }
+  }
+}
+
+async function verifyAdminPin(){
+  const h=await sha256(adminPinInput);
+  if(h===ADMIN_PIN_HASH){
+    adminState='panel';adminMsg='';
+  } else {
+    adminMsg='Fel PIN – försök igen';
+    adminPinInput='';
+  }
+}
 function drawMenu(cx){
   drawTrack(cx,{x:TRK[0].x,y:TRK[0].y},getScale(true));
   drawVignette(cx);
@@ -1796,11 +1941,14 @@ let cam={x:0,y:0}, cars=[];
 let camRot=0, camShake=0, camSX=0, camSY=0;
 
 // ─── CONTROLS ────────────────────────────────────────────────────────────────
+// KB = persistent keyboard state, never reset by touch handler
+const KB={L:false,R:false,B:false,N:false};
 let ctrlL=false, ctrlR=false, ctrlB=false, ctrlN=false, ctrlGas=false;
 const AT={};
 
 function updCtrl(){
-  ctrlL=ctrlR=ctrlB=ctrlN=ctrlGas=false;
+  // Start from keyboard state — touch adds on top, never erases KB state
+  ctrlL=KB.L; ctrlR=KB.R; ctrlB=KB.B; ctrlN=KB.N; ctrlGas=KB.L||KB.R||KB.N;
   const lay=ctrlLayout();
   for(const id in AT){
     const {x,y}=AT[id];
@@ -1819,6 +1967,7 @@ C.addEventListener('touchstart',e=>{
   const t=e.changedTouches[0];
   if(state==='garage') scrollTouchStart('garage',t.clientY);
   else if(state==='tracks') scrollTouchStart('tracks',t.clientY);
+  if(adminState!=='off'){adminClick(t.clientX,t.clientY);updCtrl();return;}
   if(state==='racing'||state==='countdown') raceClick(t.clientX,t.clientY);
   if(state==='menu')        menuClick(t.clientX,t.clientY);
   else if(state==='leaderboard') leaderboardClick(t.clientX,t.clientY);
@@ -1842,6 +1991,7 @@ C.addEventListener('touchmove',e=>{
 },{passive:false});
 C.addEventListener('click',e=>{
   initAudio();
+  if(adminState!=='off'){adminClick(e.clientX,e.clientY);return;}
   if(state==='menu')             menuClick(e.clientX,e.clientY);
   else if(state==='garage')      garageClick(e.clientX,e.clientY);
   else if(state==='tracks')      trackSelectClick(e.clientX,e.clientY);
@@ -1851,10 +2001,10 @@ C.addEventListener('click',e=>{
 });
 window.addEventListener('keydown',e=>{
   initAudio();
-  if(e.key==='ArrowLeft'||e.key==='a') ctrlL=true;
-  if(e.key==='ArrowRight'||e.key==='d') ctrlR=true;
-  if(e.key==='ArrowDown'||e.key==='s') ctrlB=true;
-  if(e.key==='ArrowUp'||e.key===' '){e.preventDefault();ctrlN=true;} // UP = NOS
+  if(e.key==='ArrowLeft'||e.key==='a'){ KB.L=true; ctrlL=true; }
+  if(e.key==='ArrowRight'||e.key==='d'){ KB.R=true; ctrlR=true; }
+  if(e.key==='ArrowDown'||e.key==='s'){ KB.B=true; ctrlB=true; }
+  if(e.key==='ArrowUp'||e.key===' '){e.preventDefault(); KB.N=true; ctrlN=true;}
   if(state==='menu'){
     if(e.key==='ArrowDown') menuSel=(menuSel+1)%MENU_ITEMS.length;
     if(e.key==='ArrowUp')   menuSel=(menuSel+MENU_ITEMS.length-1)%MENU_ITEMS.length;
@@ -1870,10 +2020,10 @@ window.addEventListener('keydown',e=>{
   if(state==='results'){ if(e.key==='Enter') startRace(); if(e.key==='Escape') state='menu'; }
 });
 window.addEventListener('keyup',e=>{
-  if(e.key==='ArrowLeft'||e.key==='a') ctrlL=false;
-  if(e.key==='ArrowRight'||e.key==='d') ctrlR=false;
-  if(e.key==='ArrowDown'||e.key==='s') ctrlB=false;
-  if(e.key==='ArrowUp'||e.key===' ') ctrlN=false;
+  if(e.key==='ArrowLeft'||e.key==='a'){ KB.L=false; ctrlL=false; }
+  if(e.key==='ArrowRight'||e.key==='d'){ KB.R=false; ctrlR=false; }
+  if(e.key==='ArrowDown'||e.key==='s'){ KB.B=false; ctrlB=false; }
+  if(e.key==='ArrowUp'||e.key===' '){ KB.N=false; ctrlN=false; }
 });
 
 // ─── RACE SETUP ──────────────────────────────────────────────────────────────
@@ -2051,6 +2201,7 @@ function loop(now){
 
   requestAnimationFrame(loop);
 }
+fbLoadAdminReset();
 requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(loop); });
 
   </script></body></html>
