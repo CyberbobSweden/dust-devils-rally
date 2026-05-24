@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1611'; // auto-updated each build
+const BUILD = '20260524.2245'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1315,7 +1315,11 @@ let menuSel=0;
 
 // ─── SCROLL HELPERS ───────────────────────────────────────────────────────────
 const scroll={garage:0,tracks:0};
-let _scrollTarget='',_scrollStartY=0,_scrollStartVal=0;
+let _scrollTarget='',_scrollStartY=0,_scrollStartVal=0,_lastTouchY=0;
+
+function isDragging(){
+  return Math.abs(_lastTouchY-_scrollStartY)>8;
+}
 
 function scrollTouchStart(target,y){
   _scrollTarget=target; _scrollStartY=y; _scrollStartVal=scroll[target]||0;
@@ -1323,6 +1327,7 @@ function scrollTouchStart(target,y){
 function scrollTouchEnd(){ _scrollTarget=''; }
 function scrollTouchMove(y){
   if(!_scrollTarget)return;
+  _lastTouchY=y;
   scroll[_scrollTarget]=Math.max(0,_scrollStartVal-(_scrollStartY-y)*1.1);
 }
 
