@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1607'; // auto-updated each build
+const BUILD = '20260524.1611'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2187,7 +2187,7 @@ function loop(now){
       G.restore();
 
       drawVignette(G);
-      if(state==='racing') drawSpeedLines(G, cars[0].speed(), cars[0].def.top);
+      if(state==='racing'){ const _nosB=Math.max(1.4,cars[0].def.nos+0.35); const _top=cars[0].nosFlame>0.1?cars[0].def.top*_nosB:cars[0].def.top; drawSpeedLines(G, cars[0].speed(), _top); }
       if(state==='racing') drawDriftPops(G,cam,SC);
       // minimap hidden in full-track view
       drawHUD(G, cars[0], cars, raceT);
