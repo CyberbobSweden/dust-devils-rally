@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.2245'; // auto-updated each build
+const BUILD = '20260524.2314'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -488,7 +488,9 @@ async function fbLoad() {
     const r=await fetch(FB_URL+'/scores_v2.json');
     const d=await r.json();
     globalScores = d
-      ? Object.values(d).filter(s=>s&&typeof s.time==='number'&&s.name)
+      ? Object.values(d)
+          .filter(s=>s&&typeof s.time==='number'&&s.name)
+          .filter(s=>!adminResetTs||!s.ts||(s.ts>adminResetTs))
           .sort((a,b)=>a.time-b.time).slice(0,15)
       : [];
   } catch(e) { scoresError=true; globalScores=[]; }
@@ -557,10 +559,10 @@ async function fbAdminReset(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(ts)
     });
-    if(!r.ok) return false;
+    if(!r.ok){ console.error('Firebase write denied - check rules for /admin/last_reset'); return false; }
     adminResetTs=ts;
     globalScores=null;
-    await fbLoad();
+    await fbLoad(); // re-filters with new adminResetTs
     return true;
   }catch(e){console.error('fbAdminReset error:',e);return false;}
 }
@@ -751,7 +753,7 @@ class Car{
     this.wentOff=false; this.pp=0; this._lapCD=0;
     this.aiI=0; this.aiM=0.68+Math.random()*0.28; this.aiReact=1;
     this.driftAng=0; this.isDrifting=false; this._combo=0;
-    this.skidTrail=[]; this.nosFlame=0;
+    this.skidTrail=[]; this.nosFlame=0; this.nosReady=true;
     this.num=Math.floor(Math.random()*98)+1;
     // Jump state
     this.jumpH=0; this.jumpV=0; this._wasOnRamp=false;
@@ -767,22 +769,23 @@ class Car{
 
     if(this.isP){
       // Auto-gas — NOS gives instant kick + higher top speed
-      const nosOn=nos&&this.nos>0;
+      // nosReady: must recharge to 25 before firing again after empty
+      if(this.nos<=0) this.nosReady=false;
+      else if(this.nos>=25) this.nosReady=true;
+
+      const nosOn=nos&&this.nos>0&&this.nosReady;
       const nosBoost=Math.max(1.4, def.nos+0.35); // min 40% faster, stacks with car stat
       const maxSp=nosOn?def.top*nosBoost:def.top;
-      const accMul=nosOn?4.5:1.0; // NOS = 4.5x acceleration rate
+      const accMul=nosOn?4.5:1.0;
       this.sp=Math.min(this.sp+def.acc*accMul*dt,maxSp);
       if(brake) this.sp=Math.max(this.sp-490*dt,-55);
       const tr=3.2*Math.min(1,Math.abs(this.sp)/110);
       if(L) this.a-=tr*dt;
       if(R) this.a+=tr*dt;
-      if(nos&&this.nos>0){
+      if(nosOn){
         this.nos=Math.max(0,this.nos-52*dt);this.nosFlame=1;
-        // NOS: immediately set sp to max boost speed (bypass acceleration ramp)
-        // Without this, drift physics absorbs the boost instantly
         this.sp=maxSp;
         if(!this._nosOn){
-          // Initial burst: add extra velocity kick in current direction
           this.vx+=Math.sin(this.a)*90;this.vy-=Math.cos(this.a)*90;
         }
         this._nosOn=true;
@@ -1328,7 +1331,7 @@ function scrollTouchEnd(){ _scrollTarget=''; }
 function scrollTouchMove(y){
   if(!_scrollTarget)return;
   _lastTouchY=y;
-  scroll[_scrollTarget]=Math.max(0,_scrollStartVal-(_scrollStartY-y)*1.1);
+  scroll[_scrollTarget]=Math.max(0,_scrollStartVal+(_scrollStartY-y)*1.1);
 }
 
 // ─── CLIP CARD ────────────────────────────────────────────────────────────────
