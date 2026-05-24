@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1234'; // auto-updated each build
+const BUILD = '20260524.1239'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1305,6 +1305,25 @@ function drawVignette(cx) {
 // ─── MENU ─────────────────────────────────────────────────────────────────────
 const MENU_ITEMS=['🏁 RACE','🚗 GARAGE','🗺 TRACKS','🏆 LEADERBOARD'];
 let menuSel=0;
+
+// ─── SCROLL HELPERS ───────────────────────────────────────────────────────────
+const scroll={garage:0,tracks:0};
+let _scrollTarget='',_scrollStartY=0,_scrollStartVal=0;
+
+function scrollTouchStart(target,y){
+  _scrollTarget=target; _scrollStartY=y; _scrollStartVal=scroll[target]||0;
+}
+function scrollTouchEnd(){ _scrollTarget=''; }
+function scrollTouchMove(y){
+  if(!_scrollTarget)return;
+  scroll[_scrollTarget]=Math.max(0,_scrollStartVal-(_scrollStartY-y)*1.1);
+}
+
+// ─── CLIP CARD ────────────────────────────────────────────────────────────────
+function clipCard(cx,x,y,w,h){
+  cx.beginPath();cx.rect(x,y,w,h);cx.clip();
+}
+
 
 // ─── ADMIN PANEL (simple native dialogs) ─────────────────────────────────────
 let adminTaps=0, adminTapT=0;
