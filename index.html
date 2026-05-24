@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1200'; // auto-updated each build
+const BUILD = '20260524.1209'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1523,14 +1523,15 @@ function drawMenu(cx){
 }
 
 function menuClick(mx,my){
-  // Admin trigger: tap top quarter of screen 7 times quickly
-  if(my<=CH*.25){
+  // Admin trigger: tap bottom-right corner (version text area) 7 times
+  // Uses separate zone that doesn't overlap menu buttons
+  if(mx>=CW*.72&&my>=CH*.82){
     const now=Date.now();
     if(now-adminTapT>3000) adminTaps=0;
     adminTapT=now; adminTaps++;
-    beep(440+adminTaps*40,.04);
-    if(adminTaps>=7){ adminState='signin'; adminTaps=0; beep(880,.1); return; }
-    return;
+    beep(300+adminTaps*30,.03);
+    if(adminTaps>=7){ adminState='signin'; adminTaps=0; beep(660,.12); return; }
+    // Don't return — still allow normal click-through if needed
   }
   // MUST match drawMenu calculations exactly
   const btnH=Math.min(42,Math.floor((CH*.88-CH*.56)/4));
