@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1239'; // auto-updated each build
+const BUILD = '20260524.1332'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -552,16 +552,17 @@ async function fbAdminReset(){
   if(!FB_URL)return false;
   try{
     const ts=Date.now();
-    await fetch(`${FB_URL}/admin/last_reset.json`,{
+    const r=await fetch(`${FB_URL}/admin/last_reset.json`,{
       method:'PUT',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(ts)
     });
+    if(!r.ok) return false;
     adminResetTs=ts;
     globalScores=null;
     await fbLoad();
     return true;
-  }catch(e){return false;}
+  }catch(e){console.error('fbAdminReset error:',e);return false;}
 }
 
 // Simple SHA-256 for PIN verification (browser built-in)
@@ -1328,16 +1329,25 @@ function clipCard(cx,x,y,w,h){
 // ─── ADMIN PANEL (simple native dialogs) ─────────────────────────────────────
 let adminTaps=0, adminTapT=0;
 
-function tryAdminAction(){
+const ADMIN_PWD_HASH='1b87663144bacd45abf40555536f2f4102c6e41864e7e83eb7a96358cecf5331';
+
+async function tryAdminAction(){
   const email=(prompt('Admin-email:')||'').trim().toLowerCase();
   if(!ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(email)){
     if(email) alert('\u26d4 Ej beh\u00f6rig: '+email);
     return;
   }
-  // Admin is authorized
-  const choice=confirm('Inloggad som admin.\n\nV\u00e4lj OK f\u00f6r att rensa GLOBALA scores (d\u00f6ljs f\u00f6r alla).\nAvbryt f\u00f6r att rensa EGNA lokala scores.');
+  const pwd=(prompt('L\u00f6senord:')||'').trim();
+  const h=await sha256(pwd);
+  if(h!==ADMIN_PWD_HASH){
+    alert('\u26d4 Fel l\u00f6senord');
+    return;
+  }
+  // Admin authorized
+  const choice=confirm('\u2705 Inloggad som admin.\n\nOK = Rensa GLOBALA scores (döljs för alla)\nAvbryt = Rensa bara MINA lokala scores');
   if(choice){
-    fbAdminReset().then(ok=>alert(ok?'\u2705 Globala scores rensade!':'\u274c Fel - kolla Firebase-regler'));
+    const ok=await fbAdminReset();
+    alert(ok?'\u2705 Globala scores dolda fr\u00e5n och med nu!':'\u274c Firebase-fel - kontrollera reglerna för /admin/last_reset');
   } else {
     S.scores=[];doSave();alert('\u2705 Dina lokala scores rensade!');
   }
