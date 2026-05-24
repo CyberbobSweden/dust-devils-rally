@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1332'; // auto-updated each build
+const BUILD = '20260524.1607'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -768,7 +768,8 @@ class Car{
     if(this.isP){
       // Auto-gas — NOS gives instant kick + higher top speed
       const nosOn=nos&&this.nos>0;
-      const maxSp=nosOn?def.top*def.nos:def.top;
+      const nosBoost=Math.max(1.4, def.nos+0.35); // min 40% faster, stacks with car stat
+      const maxSp=nosOn?def.top*nosBoost:def.top;
       const accMul=nosOn?4.5:1.0; // NOS = 4.5x acceleration rate
       this.sp=Math.min(this.sp+def.acc*accMul*dt,maxSp);
       if(brake) this.sp=Math.max(this.sp-490*dt,-55);
@@ -777,8 +778,13 @@ class Car{
       if(R) this.a+=tr*dt;
       if(nos&&this.nos>0){
         this.nos=Math.max(0,this.nos-52*dt);this.nosFlame=1;
-        // Direct velocity kick on NOS activation
-        if(!this._nosOn){this.vx+=Math.sin(this.a)*60;this.vy-=Math.cos(this.a)*60;}
+        // NOS: immediately set sp to max boost speed (bypass acceleration ramp)
+        // Without this, drift physics absorbs the boost instantly
+        this.sp=maxSp;
+        if(!this._nosOn){
+          // Initial burst: add extra velocity kick in current direction
+          this.vx+=Math.sin(this.a)*90;this.vy-=Math.cos(this.a)*90;
+        }
         this._nosOn=true;
       } else {
         this.nos=Math.min(100,this.nos+11*dt);
