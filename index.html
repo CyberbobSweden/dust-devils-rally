@@ -84,7 +84,7 @@ canvas { display: block; }
   <canvas id="c"></canvas><script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.0018'; // auto-updated each build
+const BUILD = '20260524.1103'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -206,9 +206,9 @@ const ALL_TRACKS=[
    raw:[
      {x:200,y:880},{x:560,y:910},{x:960,y:890},{x:1360,y:840},{x:1700,y:700},
      {x:1900,y:520},{x:1960,y:320},{x:1880,y:160},{x:1680,y:60},{x:1440,y:40},
-     {x:1240,y:100},{x:1120,y:260},{x:1200,y:400},{x:1340,y:460},{x:1440,y:360},
-     {x:1380,y:220},{x:1200,y:180},{x:1060,y:300},{x:940,y:460},{x:820,y:380},
-     {x:680,y:260},{x:500,y:220},{x:340,y:320},{x:240,y:480},{x:180,y:660}
+     {x:1240,y:100},{x:1100,y:230},{x:1180,y:420},{x:1360,y:500},
+     {x:1300,y:260},{x:1080,y:200},{x:900,y:380},
+     {x:680,y:280},{x:480,y:240},{x:320,y:360},{x:220,y:540},{x:180,y:700}
    ]},
 
   {name:'GRAND CIRCUIT',laps:2, sub:'Long technical masterclass',
@@ -846,11 +846,12 @@ class Car{
 
     // NOS flame
     if(this.isP&&this.nosFlame>0.05){
+      // Flame draws at local -y (rear of car, with +PI rotation convention)
       const fl=this.nosFlame*dH*.32+px*2;
       cx.globalAlpha=this.nosFlame*.85;cx.fillStyle='#44aaff';
-      cx.beginPath();cx.moveTo(-px,dH/2);cx.lineTo(0,dH/2+fl);cx.lineTo(px,dH/2);cx.fill();
+      cx.beginPath();cx.moveTo(-px,-dH/2);cx.lineTo(0,-dH/2-fl);cx.lineTo(px,-dH/2);cx.fill();
       cx.globalAlpha=.38;cx.fillStyle='#fff';
-      cx.beginPath();cx.moveTo(-px*.4,dH/2);cx.lineTo(0,dH/2+fl*.5);cx.lineTo(px*.4,dH/2);cx.fill();
+      cx.beginPath();cx.moveTo(-px*.4,-dH/2);cx.lineTo(0,-dH/2-fl*.5);cx.lineTo(px*.4,-dH/2);cx.fill();
       cx.globalAlpha=1;
     }
     cx.restore();
@@ -1812,11 +1813,10 @@ C.addEventListener('click',e=>{
 });
 window.addEventListener('keydown',e=>{
   initAudio();
-  if(e.key==='ArrowLeft'||e.key==='a'){ctrlL=true;ctrlGas=true;}
-  if(e.key==='ArrowRight'||e.key==='d'){ctrlR=true;ctrlGas=true;}
+  if(e.key==='ArrowLeft'||e.key==='a') ctrlL=true;
+  if(e.key==='ArrowRight'||e.key==='d') ctrlR=true;
   if(e.key==='ArrowDown'||e.key==='s') ctrlB=true;
-  if(e.key===' '){e.preventDefault();ctrlN=true;ctrlGas=true;}
-  if(e.key==='ArrowUp'){e.preventDefault();ctrlGas=true;}
+  if(e.key==='ArrowUp'||e.key===' '){e.preventDefault();ctrlN=true;} // UP = NOS
   if(state==='menu'){
     if(e.key==='ArrowDown') menuSel=(menuSel+1)%MENU_ITEMS.length;
     if(e.key==='ArrowUp')   menuSel=(menuSel+MENU_ITEMS.length-1)%MENU_ITEMS.length;
@@ -1835,8 +1835,7 @@ window.addEventListener('keyup',e=>{
   if(e.key==='ArrowLeft'||e.key==='a') ctrlL=false;
   if(e.key==='ArrowRight'||e.key==='d') ctrlR=false;
   if(e.key==='ArrowDown'||e.key==='s') ctrlB=false;
-  if(e.key===' ') ctrlN=false;
-  if(!ctrlL&&!ctrlR&&!ctrlN&&e.key!=='ArrowDown') ctrlGas=false;
+  if(e.key==='ArrowUp'||e.key===' ') ctrlN=false;
 });
 
 // ─── RACE SETUP ──────────────────────────────────────────────────────────────
