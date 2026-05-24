@@ -84,7 +84,7 @@ canvas { display: block; }
   <canvas id="c"></canvas><script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1103'; // auto-updated each build
+const BUILD = '20260524.1114'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -226,12 +226,12 @@ const ALL_TRACKS=[
    steps:18,tw:86,grass:'#304828',d1:'#808868',d2:'#989e80',edge:'#384028',
    tc:['#1e3818','#2a4820','#142810'],
    raw:[
-     {x:400,y:820},{x:660,y:840},{x:860,y:760},{x:980,y:580},{x:880,y:420},
-     {x:700,y:320},{x:560,y:180},{x:720,y:80},{x:960,y:70},{x:1180,y:160},
-     {x:1320,y:320},{x:1200,y:460},{x:1060,y:560},{x:1180,y:700},{x:1340,y:780},
-     {x:1480,y:680},{x:1560,y:520},{x:1480,y:360},{x:1340,y:240},{x:1460,y:120},
-     {x:1620,y:80},{x:1780,y:180},{x:1860,y:380},{x:1800,y:580},{x:1640,y:700},
-     {x:1500,y:820}
+     {x:300,y:820},{x:600,y:840},{x:860,y:820},{x:1020,y:700},{x:1020,y:520},
+     {x:900,y:380},{x:720,y:260},{x:600,y:140},{x:760,y:70},{x:980,y:60},
+     {x:1180,y:140},{x:1320,y:300},{x:1200,y:460},{x:1060,y:560},{x:1180,y:700},
+     {x:1360,y:780},{x:1500,y:680},{x:1580,y:500},{x:1500,y:340},{x:1360,y:220},
+     {x:1480,y:100},{x:1660,y:80},{x:1820,y:200},{x:1880,y:400},{x:1820,y:600},
+     {x:1640,y:720},{x:1480,y:820}
    ]},
 
   {name:'FIGURE EIGHT',laps:3,  sub:'Double loop crossing',
@@ -585,7 +585,7 @@ function doCollisions(cars){
         // Only sound+shake when player involved
         if(a.isP||b.isP){
           beep(110+Math.random()*70,.13,.25,'sawtooth');
-          camShake=3;
+          camShake=1.5;
         }
         const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
         for(let k=0;k<5;k++) addDust(mx,my,'#ffcc44',1);
@@ -719,7 +719,7 @@ class Car{
     if(onRamp&&!this._wasOnRamp&&this.jumpH<5&&Math.abs(this.sp)>80){
       this.jumpV=280; // launch!
       this._wasOnRamp=true;
-      if(this.isP){beep(660,.06,.15,'triangle');camShake=2;}
+      if(this.isP){beep(660,.06,.15,'triangle');camShake=1.2;}
     }
     if(!onRamp) this._wasOnRamp=false;
     if(this.jumpH>0||this.jumpV>0){
@@ -728,7 +728,7 @@ class Car{
       if(this.jumpH<=0&&this.jumpV<0){
         this.jumpH=0;this.jumpV=0;
         if(this.isP){
-          camShake=5;
+          camShake=2.5;
           beep(120,.12,.3,'sawtooth');
           for(let k=0;k<10;k++) addDust(this.x+(Math.random()-.5)*30,this.y+(Math.random()-.5)*30,'rgba(200,175,130,.9)',1);
         }
@@ -743,7 +743,7 @@ class Car{
     this.isDrifting=!airborne&&Math.abs(da)>0.22&&Math.abs(this.sp)>120;
     if(this.isDrifting&&Math.abs(this.sp)>120){
       this.skidTrail.push({x:this.x,y:this.y,t:Date.now()});
-      if(this.skidTrail.length>150)this.skidTrail.shift();
+      if(this.skidTrail.length>80)this.skidTrail.shift();
       if(this.isP)this._combo+=Math.abs(da)*Math.abs(this.sp)*dt*0.005;
     }else{
       if(this.isP&&this._combo>3)spawnDriftPopup(this,Math.floor(this._combo));
@@ -1918,7 +1918,7 @@ function finishRace(){
 // ─── MAIN LOOP ────────────────────────────────────────────────────────────────
 let lastT=0;
 function loop(now){
-  const dt=Math.min((now-lastT)/1000,0.05); lastT=now;
+  const dt=Math.min((now-lastT)/1000,0.033); lastT=now;
   const SC=getScale();
   G.clearRect(0,0,CW,CH);
 
@@ -1962,7 +1962,7 @@ function loop(now){
         const la=90, tx=pl.x+Math.sin(pl.a)*la, ty=pl.y-Math.cos(pl.a)*la;
         cam.x+=(tx-cam.x)*.13; cam.y+=(ty-cam.y)*.13;
         // Shake decay
-        camShake*=0.80; camSX=(Math.random()-.5)*camShake; camSY=(Math.random()-.5)*camShake;
+        camShake*=0.84; const _sh=camShake*0.7; camSX=Math.sin(now*.031)*_sh; camSY=Math.cos(now*.047)*_sh;
         if(pl.lap>=(TDEF&&TDEF.laps?TDEF.laps:LAPS)) finishRace();
       }
 
