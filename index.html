@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1226'; // auto-updated each build
+const BUILD = '20260524.1234'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -997,6 +997,13 @@ class Car{
     }
     cx.restore();cx.globalAlpha=1;
   }
+}
+
+// ─── UI HELPER ────────────────────────────────────────────────────────────────
+function btn(cx,x,y,w,h,fill,stroke,lw=1){
+  cx.fillStyle=fill;
+  cx.beginPath();cx.roundRect(x,y,w,h,5);cx.fill();
+  cx.strokeStyle=stroke;cx.lineWidth=lw;cx.stroke();
 }
 
 // ─── TRACK DRAWING ───────────────────────────────────────────────────────────
