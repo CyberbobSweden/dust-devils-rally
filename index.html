@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1222'; // auto-updated each build
+const BUILD = '20260524.1226'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1294,6 +1294,10 @@ function drawVignette(cx) {
   g.addColorStop(1,'rgba(0,0,0,.52)');
   cx.fillStyle=g; cx.fillRect(0,0,CW,CH);
 }
+
+// ─── MENU ─────────────────────────────────────────────────────────────────────
+const MENU_ITEMS=['🏁 RACE','🚗 GARAGE','🗺 TRACKS','🏆 LEADERBOARD'];
+let menuSel=0;
 
 // ─── ADMIN PANEL (simple native dialogs) ─────────────────────────────────────
 let adminTaps=0, adminTapT=0;
