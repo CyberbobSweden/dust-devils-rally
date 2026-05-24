@@ -77,7 +77,6 @@ canvas { display: block; }
 }
 
   </style>
-  <!-- Firebase Auth SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b"});</script>
@@ -90,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1143'; // auto-updated each build
+const BUILD = '20260524.1149'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -456,7 +455,8 @@ function loadSave() {
   } catch(e) {}
 }
 function doSave() {
-  try { localStorage.setItem('ddr_v4', JSON.stringify(S)); } catch(e) {}
+  try { S.ts=Date.now(); localStorage.setItem('ddr_v4', JSON.stringify(S)); } catch(e) {}
+  fbSaveProgress(); // auto-sync to Firebase
 }
 
 // ─── FIREBASE GLOBAL LEADERBOARD ─────────────────────────────────────────────
@@ -568,6 +568,56 @@ async function fbAdminReset(){
 async function sha256(str){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ─── CLOUD SAVE (Firebase — sparas på ditt namn) ──────────────────────────────
+// Sparas automatiskt vid varje doSave() om spelare har ett namn
+// Återställs automatiskt när man anger sitt namn nästa gång
+
+async function fbSaveProgress(){
+  if(!FB_URL||!S.name) return;
+  const key=encodeURIComponent(S.name.toLowerCase().replace(/[^a-z0-9]/g,'_'));
+  try{
+    const payload={
+      name:S.name, coins:S.coins,
+      unlocked:S.unlocked, selected:S.selected,
+      unlockedTracks:S.unlockedTracks, currentTrack:S.currentTrack,
+      bestTimes:S.bestTimes, pid:S.pid,
+      ts:Date.now()
+    };
+    await fetch(`${FB_URL}/player_saves/${key}.json`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+  }catch(e){}
+}
+
+async function fbLoadProgress(name){
+  if(!FB_URL||!name) return false;
+  const key=encodeURIComponent(name.toLowerCase().replace(/[^a-z0-9]/g,'_'));
+  try{
+    const r=await fetch(`${FB_URL}/player_saves/${key}.json`);
+    const d=await r.json();
+    if(d&&d.name&&d.ts){
+      // Merge: keep highest coins, most unlocks
+      const localTs=S.ts||0;
+      if(d.ts>localTs){
+        Object.assign(S,{
+          coins:Math.max(S.coins||0,d.coins||0),
+          unlocked:d.unlocked||S.unlocked,
+          selected:d.selected||S.selected,
+          unlockedTracks:d.unlockedTracks||S.unlockedTracks,
+          currentTrack:d.currentTrack||S.currentTrack,
+          bestTimes:{...d.bestTimes,...S.bestTimes}, // keep local best times too
+          pid:S.pid // always keep local pid
+        });
+        doSave();
+        return true; // restored from cloud
+      }
+    }
+  }catch(e){}
+  return false;
 }
 
 // ─── PARTICLES ───────────────────────────────────────────────────────────────
@@ -1472,6 +1522,13 @@ function drawMenu(cx){
 }
 
 function menuClick(mx,my){
+  // Secret admin trigger: tap version text (bottom-right) 7 times quickly
+  if(mx>=CW-160&&my>=CH-40){
+    const now=Date.now();
+    if(now-adminTapT>2500) adminTaps=0;
+    adminTapT=now; adminTaps++;
+    if(adminTaps>=7){ adminState='signin'; adminTaps=0; beep(880,.06); return; }
+  }
   // MUST match drawMenu calculations exactly
   const btnH=Math.min(42,Math.floor((CH*.88-CH*.56)/4));
   const btnW=Math.min(260,CW*.55);
@@ -1917,6 +1974,10 @@ function drawResults(cx,cam,SC){
 }
 function resultsClick(mx,my){if(my>CH*.76){if(mx<CW/2)startRace();else state='menu';}}
 
+
+// Show a brief "progress restored" toast
+let cloudRestoreMsg=0;
+function showCloudRestoreMsg(){ cloudRestoreMsg=4; } // show for 4 seconds
 // ─── CANVAS ──────────────────────────────────────────────────────────────────
 const C=document.getElementById('c'), G=C.getContext('2d');
 const CAR_SHEET=new Image(); CAR_SHEET.src=CAR_SHEET_SRC;
@@ -1928,9 +1989,13 @@ if(!G.roundRect) G.roundRect=function(x,y,w,h){ this.rect(x,y,w,h); };
 // ─── NAME SCREEN ─────────────────────────────────────────────────────────────
 const NS=document.getElementById('nscreen');
 const NF=document.getElementById('nfield');
-document.getElementById('nbtn').addEventListener('click',()=>{
+document.getElementById('nbtn').addEventListener('click',async()=>{
   const n=NF.value.trim().toUpperCase(); if(!n) return;
-  S.name=n; doSave(); NS.style.display='none'; NF.blur(); initAudio();
+  S.name=n; NS.style.display='none'; NF.blur(); initAudio();
+  // Try to restore progress from Firebase cloud save
+  const restored=await fbLoadProgress(n);
+  if(restored) showCloudRestoreMsg();
+  doSave();
 });
 NF.addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('nbtn').click(); });
 
