@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1209'; // auto-updated each build
+const BUILD = '20260524.1222'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -774,8 +774,16 @@ class Car{
       const tr=3.2*Math.min(1,Math.abs(this.sp)/110);
       if(L) this.a-=tr*dt;
       if(R) this.a+=tr*dt;
-      if(nos&&this.nos>0){this.nos=Math.max(0,this.nos-52*dt);this.nosFlame=1;}
-      else{this.nos=Math.min(100,this.nos+11*dt);this.nosFlame=Math.max(0,this.nosFlame-.1);}
+      if(nos&&this.nos>0){
+        this.nos=Math.max(0,this.nos-52*dt);this.nosFlame=1;
+        // Direct velocity kick on NOS activation
+        if(!this._nosOn){this.vx+=Math.sin(this.a)*60;this.vy-=Math.cos(this.a)*60;}
+        this._nosOn=true;
+      } else {
+        this.nos=Math.min(100,this.nos+11*dt);
+        this.nosFlame=Math.max(0,this.nosFlame-.1);
+        this._nosOn=false;
+      }
     }else{
       const wp=TRK[this.aiI];
       const dx=wp.x-this.x,dy=wp.y-this.y,dist=Math.sqrt(dx*dx+dy*dy);
@@ -1287,136 +1295,24 @@ function drawVignette(cx) {
   cx.fillStyle=g; cx.fillRect(0,0,CW,CH);
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-function btn(cx,x,y,w,h,bg,stroke,lw=1){
-  cx.fillStyle=bg;cx.beginPath();cx.roundRect(x,y,w,h,6);cx.fill();
-  cx.strokeStyle=stroke;cx.lineWidth=lw;cx.stroke();
-}
-function clipCard(cx,x,y,w,h){cx.beginPath();cx.roundRect(x,y,w,h,6);cx.clip();}
+// ─── ADMIN PANEL (simple native dialogs) ─────────────────────────────────────
+let adminTaps=0, adminTapT=0;
 
-// ─── SCROLL STATE ─────────────────────────────────────────────────────────────
-const scroll={
-  garage:0, tracks:0,
-  _startY:null, _startVal:0, _dragging:false, _screen:null
-};
-function scrollTouchStart(screen,touchY){
-  scroll._screen=screen; scroll._startTouchY=touchY;
-  scroll._startVal=scroll[screen]||0; scroll._dragging=false;
-}
-function scrollTouchMove(touchY){
-  if(!scroll._screen)return;
-  const dy=scroll._startTouchY-touchY;
-  if(Math.abs(dy)>6)scroll._dragging=true;
-  if(scroll._dragging)scroll[scroll._screen]=Math.max(0,scroll._startVal+dy);
-}
-function scrollTouchEnd(){scroll._screen=null;}
-function isDragging(){return scroll._dragging;}
-
-// ─── MAIN MENU ────────────────────────────────────────────────────────────────
-const MENU_ITEMS=['▶  RACE','✦  GARAGE','⛟  TRACKS','★  LEADERBOARD'];
-let menuSel=0;
-
-
-// ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
-let adminTaps=0, adminTapT=0, adminState='off'; // off | signin | panel
-let adminMsg='', adminUser=null;
-
-function drawAdmin(cx){
-  cx.fillStyle='rgba(0,0,0,.93)';cx.fillRect(0,0,CW,CH);
-  cx.textAlign='center';
-  cx.fillStyle='#ff4400';cx.font=`bold ${Math.min(20,CH*.04)}px Impact,monospace`;
-  cx.fillText('⚙ ADMIN PANEL',CW/2,CH*.1);
-  cx.fillStyle='rgba(255,255,255,.35)';cx.font=`${Math.min(11,CH*.022)}px monospace`;
-  cx.fillText('Endast för behöriga admins',CW/2,CH*.16);
-
-  if(adminState==='signin'){
-    const bw=Math.min(280,CW*.75),bh=Math.min(52,CH*.1),bx=CW/2-bw/2,by=CH*.38;
-    // Google sign-in button
-    cx.fillStyle='#ffffff';cx.beginPath();cx.roundRect(bx,by,bw,bh,8);cx.fill();
-    cx.fillStyle='#444';cx.font=`bold ${Math.min(15,bh*.32)}px Arial,monospace`;
-    cx.fillText('G  Logga in med Google',CW/2,by+bh*.63);
-    // G icon color
-    cx.fillStyle='#4285F4';cx.font=`bold ${Math.min(17,bh*.36)}px Arial`;
-    cx.fillText('G',bx+bw*.12,by+bh*.65);
-    if(adminMsg){
-      cx.fillStyle=adminMsg.includes('✓')?'#44ff88':'#ff7755';
-      cx.font=`${Math.min(11,CH*.022)}px monospace`;
-      cx.fillText(adminMsg,CW/2,CH*.62);
-    }
-    cx.fillStyle='rgba(255,255,255,.22)';cx.font=`${Math.min(11,CH*.022)}px monospace`;
-    cx.fillText('✕ stäng',CW/2,CH-18);
-
-  } else if(adminState==='panel'){
-    cx.fillStyle='#44ff88';cx.font=`${Math.min(12,CH*.024)}px monospace`;
-    cx.fillText(`✓ ${adminUser||'Admin'}`,CW/2,CH*.22);
-    const bw=Math.min(280,CW*.75),bh=Math.min(52,CH*.1),bx=CW/2-bw/2;
-
-    // Rensa globala scores
-    btn(cx,bx,CH*.32,bw,bh,'rgba(255,60,60,.22)','rgba(255,80,80,.65)');
-    cx.fillStyle='#ffaaaa';cx.font=`bold ${Math.min(14,bh*.3)}px monospace`;
-    cx.fillText('🗑  RENSA GLOBALA SCORES',CW/2,CH*.32+bh*.64);
-    cx.fillStyle='rgba(255,255,255,.3)';cx.font=`${Math.min(10,CH*.02)}px monospace`;
-    cx.fillText('Döljer alla scores för alla spelare',CW/2,CH*.32+bh+13);
-
-    // Rensa lokala scores
-    btn(cx,bx,CH*.58,bw,bh,'rgba(255,160,60,.18)','rgba(255,160,60,.45)');
-    cx.fillStyle='#ffcc88';cx.font=`bold ${Math.min(14,bh*.3)}px monospace`;
-    cx.fillText('🗑  RENSA MINA LOKALA SCORES',CW/2,CH*.58+bh*.64);
-
-    // Logga ut
-    btn(cx,bx,CH*.76,bw,Math.min(34,CH*.07),'rgba(255,255,255,.07)','rgba(255,255,255,.2)');
-    cx.fillStyle='rgba(255,255,255,.5)';cx.font=`${Math.min(11,CH*.022)}px monospace`;
-    cx.fillText('Logga ut',CW/2,CH*.76+Math.min(34,CH*.07)*.65);
-
-    if(adminMsg){
-      cx.fillStyle=adminMsg.includes('✓')?'#44ff88':'#ff7755';
-      cx.font=`bold ${Math.min(12,CH*.024)}px monospace`;
-      cx.fillText(adminMsg,CW/2,CH*.9);
-    }
-    cx.fillStyle='rgba(255,255,255,.22)';cx.font=`${Math.min(11,CH*.022)}px monospace`;
-    cx.fillText('✕ stäng',CW/2,CH-18);
+function tryAdminAction(){
+  const email=(prompt('Admin-email:')||'').trim().toLowerCase();
+  if(!ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(email)){
+    if(email) alert('\u26d4 Ej beh\u00f6rig: '+email);
+    return;
+  }
+  // Admin is authorized
+  const choice=confirm('Inloggad som admin.\n\nV\u00e4lj OK f\u00f6r att rensa GLOBALA scores (d\u00f6ljs f\u00f6r alla).\nAvbryt f\u00f6r att rensa EGNA lokala scores.');
+  if(choice){
+    fbAdminReset().then(ok=>alert(ok?'\u2705 Globala scores rensade!':'\u274c Fel - kolla Firebase-regler'));
+  } else {
+    S.scores=[];doSave();alert('\u2705 Dina lokala scores rensade!');
   }
 }
 
-function adminClick(mx,my){
-  if(my>CH-30){adminState='off';adminMsg='';return;}
-  if(adminState==='signin'){
-    const bw=Math.min(280,CW*.75),bh=Math.min(52,CH*.1),bx=CW/2-bw/2,by=CH*.38;
-    if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+bh) adminGoogleSignIn();
-  } else if(adminState==='panel'){
-    const bw=Math.min(280,CW*.75),bh=Math.min(52,CH*.1),bx=CW/2-bw/2;
-    if(mx>=bx&&mx<=bx+bw){
-      if(my>=CH*.32&&my<=CH*.32+bh){
-        adminMsg='Rensar...';
-        fbAdminReset().then(ok=>{adminMsg=ok?'✓ Globala scores dolda!':'✗ Fel — kolla Firebase-regler';});
-      }
-      if(my>=CH*.58&&my<=CH*.58+bh){
-        S.scores=[];doSave();adminMsg='✓ Lokala scores rensade!';beep(440,.1);
-      }
-      const logoutH=Math.min(34,CH*.07);
-      if(my>=CH*.76&&my<=CH*.76+logoutH){
-        firebase.auth().signOut();adminState='signin';adminUser=null;adminMsg='';
-      }
-    }
-  }
-}
-
-async function adminGoogleSignIn(){
-  adminMsg='Öppnar Google...';
-  try{
-    const provider=new firebase.auth.GoogleAuthProvider();
-    const result=await firebase.auth().signInWithPopup(provider);
-    const email=result.user.email;
-    if(ADMIN_EMAILS.includes(email)){
-      adminState='panel';adminUser=email;adminMsg='';
-    } else {
-      adminMsg=`✗ ${email} har ej behörighet`;
-      firebase.auth().signOut();
-    }
-  }catch(e){
-    adminMsg='✗ Inloggning avbruten';
-  }
-}
 function drawMenu(cx){
   drawTrack(cx,{x:TRK[0].x,y:TRK[0].y},getScale(true));
   drawVignette(cx);
@@ -1523,15 +1419,13 @@ function drawMenu(cx){
 }
 
 function menuClick(mx,my){
-  // Admin trigger: tap bottom-right corner (version text area) 7 times
-  // Uses separate zone that doesn't overlap menu buttons
-  if(mx>=CW*.72&&my>=CH*.82){
+  // Admin trigger: tap bottom-right corner 7 times
+  if(mx>=CW*.72&&my>=CH*.80){
     const now=Date.now();
     if(now-adminTapT>3000) adminTaps=0;
     adminTapT=now; adminTaps++;
     beep(300+adminTaps*30,.03);
-    if(adminTaps>=7){ adminState='signin'; adminTaps=0; beep(660,.12); return; }
-    // Don't return — still allow normal click-through if needed
+    if(adminTaps>=7){ adminTaps=0; beep(660,.12); tryAdminAction(); return; }
   }
   // MUST match drawMenu calculations exactly
   const btnH=Math.min(42,Math.floor((CH*.88-CH*.56)/4));
@@ -2042,7 +1936,6 @@ C.addEventListener('touchstart',e=>{
   const t=e.changedTouches[0];
   if(state==='garage') scrollTouchStart('garage',t.clientY);
   else if(state==='tracks') scrollTouchStart('tracks',t.clientY);
-  if(adminState!=='off'){adminClick(t.clientX,t.clientY);updCtrl();return;}
   if(state==='racing'||state==='countdown') raceClick(t.clientX,t.clientY);
   if(state==='menu')        menuClick(t.clientX,t.clientY);
   else if(state==='leaderboard') leaderboardClick(t.clientX,t.clientY);
@@ -2066,7 +1959,6 @@ C.addEventListener('touchmove',e=>{
 },{passive:false});
 C.addEventListener('click',e=>{
   initAudio();
-  if(adminState!=='off'){adminClick(e.clientX,e.clientY);return;}
   if(state==='menu')             menuClick(e.clientX,e.clientY);
   else if(state==='garage')      garageClick(e.clientX,e.clientY);
   else if(state==='tracks')      trackSelectClick(e.clientX,e.clientY);
@@ -2074,7 +1966,7 @@ C.addEventListener('click',e=>{
   else if(state==='results')     resultsClick(e.clientX,e.clientY);
   else if(state==='racing'||state==='countdown') raceClick(e.clientX,e.clientY);
 });
-window.addEventListener('keydown',e=>{
+document.addEventListener('keydown',e=>{
   initAudio();
   if(e.key==='ArrowLeft'||e.key==='a'){ KB.L=true; ctrlL=true; }
   if(e.key==='ArrowRight'||e.key==='d'){ KB.R=true; ctrlR=true; }
@@ -2094,7 +1986,7 @@ window.addEventListener('keydown',e=>{
   if((state==='racing'||state==='countdown')&&e.key==='Escape'){ stopEngine(); setScreech(false); state='menu'; }
   if(state==='results'){ if(e.key==='Enter') startRace(); if(e.key==='Escape') state='menu'; }
 });
-window.addEventListener('keyup',e=>{
+document.addEventListener('keyup',e=>{
   if(e.key==='ArrowLeft'||e.key==='a'){ KB.L=false; ctrlL=false; }
   if(e.key==='ArrowRight'||e.key==='d'){ KB.R=false; ctrlR=false; }
   if(e.key==='ArrowDown'||e.key==='s'){ KB.B=false; ctrlB=false; }
