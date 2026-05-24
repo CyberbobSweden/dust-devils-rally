@@ -76,15 +76,21 @@ canvas { display: block; }
   #rotate { display: flex; }
 }
 
-  </style></head><body>
+  </style>
+  <!-- Firebase Auth SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b"});</script>
+</head><body>
   <div id="rotate"><span>&#8635;</span>Rotate to landscape!</div>
   <div id="nscreen"><p>DUST DEVILS RALLY</p><p class="sub">Enter your racer name</p>
     <input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
     <button id="nbtn">START RACING!</button></div>
-  <canvas id="c"></canvas><script>
+  <canvas id="c"></canvas>
+  <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1137'; // auto-updated each build
+const BUILD = '20260524.1143'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -135,10 +141,14 @@ const CAR_SPRITES={
   aero:   {sx:256,   sy:96,sw:64,sh:96},
 };
 
-// ─── ADMIN ────────────────────────────────────────────────────────────────────
-// SHA-256 hash av admin-PIN. Ändra PIN och beräkna ny hash innan deploy!
-// Nuvarande PIN: se admins
-const ADMIN_PIN_HASH='a59101aafc3e8d1fd1649a3885e8e77cd7a3ba0b80fc5b9501b3919cf0c8becc';
+
+// ─── FIREBASE CONFIG (för Auth) ───────────────────────────────────────────────
+const FB_CONFIG={
+  apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",
+  authDomain:"dust-devils-rally.firebaseapp.com",
+  projectId:"dust-devils-rally",
+  appId:"1:772387413090:web:756355d8c70eb4f80fc53b"
+};
 const ADMIN_EMAILS=['richard.x.bostrom@gmail.com','oliver.x.bostrom@gmail.com'];
 
 // ─── SPLINE MATH ─────────────────────────────────────────────────────────────
@@ -1258,107 +1268,103 @@ let menuSel=0;
 
 
 // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
-let adminTaps=0, adminTapT=0, adminState='off'; // off | pin | panel
-let adminPinInput='', adminMsg='';
+let adminTaps=0, adminTapT=0, adminState='off'; // off | signin | panel
+let adminMsg='', adminUser=null;
 
 function drawAdmin(cx){
-  cx.fillStyle='rgba(0,0,0,.92)';cx.fillRect(0,0,CW,CH);
+  cx.fillStyle='rgba(0,0,0,.93)';cx.fillRect(0,0,CW,CH);
   cx.textAlign='center';
-  cx.fillStyle='#ff4400';cx.font='bold 18px Impact,monospace';
-  cx.fillText('⚙ ADMIN PANEL',CW/2,50);
-  cx.fillStyle='rgba(255,255,255,.4)';cx.font='10px monospace';
-  cx.fillText('Only for authorised admins',CW/2,68);
+  cx.fillStyle='#ff4400';cx.font=`bold ${Math.min(20,CH*.04)}px Impact,monospace`;
+  cx.fillText('⚙ ADMIN PANEL',CW/2,CH*.1);
+  cx.fillStyle='rgba(255,255,255,.35)';cx.font=`${Math.min(11,CH*.022)}px monospace`;
+  cx.fillText('Endast för behöriga admins',CW/2,CH*.16);
 
-  if(adminState==='pin'){
-    cx.fillStyle='rgba(255,255,255,.8)';cx.font='14px monospace';
-    cx.fillText('Enter PIN:',CW/2,CH*.38);
-    // PIN display (dots)
-    const dots='●'.repeat(adminPinInput.length)+'_'.repeat(Math.max(0,6-adminPinInput.length));
-    cx.fillStyle='#ffdd33';cx.font='bold 22px monospace';
-    cx.fillText(dots,CW/2,CH*.5);
+  if(adminState==='signin'){
+    const bw=Math.min(280,CW*.75),bh=Math.min(52,CH*.1),bx=CW/2-bw/2,by=CH*.38;
+    // Google sign-in button
+    cx.fillStyle='#ffffff';cx.beginPath();cx.roundRect(bx,by,bw,bh,8);cx.fill();
+    cx.fillStyle='#444';cx.font=`bold ${Math.min(15,bh*.32)}px Arial,monospace`;
+    cx.fillText('G  Logga in med Google',CW/2,by+bh*.63);
+    // G icon color
+    cx.fillStyle='#4285F4';cx.font=`bold ${Math.min(17,bh*.36)}px Arial`;
+    cx.fillText('G',bx+bw*.12,by+bh*.65);
     if(adminMsg){
-      cx.fillStyle='#ff6644';cx.font='12px monospace';
+      cx.fillStyle=adminMsg.includes('✓')?'#44ff88':'#ff7755';
+      cx.font=`${Math.min(11,CH*.022)}px monospace`;
       cx.fillText(adminMsg,CW/2,CH*.62);
     }
-    // Numpad
-    const keys=['1','2','3','4','5','6','7','8','9','⌫','0','✓'];
-    const bw=Math.min(70,CW*.22), bh=36, gap=6;
-    const gx=CW/2-bw*1.5-gap, gy=CH*.66;
-    keys.forEach((k,i)=>{
-      const col=i%3, row=Math.floor(i/3);
-      const bx=gx+col*(bw+gap), by=gy+row*(bh+gap);
-      const special=k==='⌫'||k==='✓';
-      cx.fillStyle=special?'rgba(255,100,50,.3)':'rgba(255,255,255,.12)';
-      cx.beginPath();cx.roundRect(bx,by,bw,bh,6);cx.fill();
-      cx.strokeStyle=special?'rgba(255,100,50,.5)':'rgba(255,255,255,.2)';
-      cx.lineWidth=1;cx.stroke();
-      cx.fillStyle=special?'#ff8866':'#fff';
-      cx.font='bold 16px monospace';cx.fillText(k,bx+bw/2,by+bh*.68);
-    });
-    // Close
-    cx.fillStyle='rgba(255,255,255,.25)';cx.font='11px monospace';
-    cx.fillText('✕ close — tap here',CW/2,CH-16);
+    cx.fillStyle='rgba(255,255,255,.22)';cx.font=`${Math.min(11,CH*.022)}px monospace`;
+    cx.fillText('✕ stäng',CW/2,CH-18);
 
   } else if(adminState==='panel'){
-    cx.fillStyle='#44ff88';cx.font='12px monospace';
-    cx.fillText('✓ Authenticated',CW/2,88);
-    // Reset global scores button
-    const bw=Math.min(260,CW*.7),bh=48,bx=CW/2-bw/2;
-    btn(cx,bx,CH*.35,bw,bh,'rgba(255,60,60,.2)','rgba(255,80,80,.6)');
-    cx.fillStyle='#ff8080';cx.font='bold 14px monospace';
-    cx.fillText('🗑 RENSA GLOBALA SCORES',CW/2,CH*.35+bh*.65);
-    cx.fillStyle='rgba(255,255,255,.35)';cx.font='10px monospace';
-    cx.fillText('Göms för alla — kan ej ångras!',CW/2,CH*.35+bh+14);
-    // Reset local
-    btn(cx,bx,CH*.62,bw,bh,'rgba(255,160,60,.15)','rgba(255,160,60,.4)');
-    cx.fillStyle='#ffaa66';cx.font='bold 14px monospace';
-    cx.fillText('🗑 RENSA MINA LOKALA SCORES',CW/2,CH*.62+bh*.65);
+    cx.fillStyle='#44ff88';cx.font=`${Math.min(12,CH*.024)}px monospace`;
+    cx.fillText(`✓ ${adminUser||'Admin'}`,CW/2,CH*.22);
+    const bw=Math.min(280,CW*.75),bh=Math.min(52,CH*.1),bx=CW/2-bw/2;
+
+    // Rensa globala scores
+    btn(cx,bx,CH*.32,bw,bh,'rgba(255,60,60,.22)','rgba(255,80,80,.65)');
+    cx.fillStyle='#ffaaaa';cx.font=`bold ${Math.min(14,bh*.3)}px monospace`;
+    cx.fillText('🗑  RENSA GLOBALA SCORES',CW/2,CH*.32+bh*.64);
+    cx.fillStyle='rgba(255,255,255,.3)';cx.font=`${Math.min(10,CH*.02)}px monospace`;
+    cx.fillText('Döljer alla scores för alla spelare',CW/2,CH*.32+bh+13);
+
+    // Rensa lokala scores
+    btn(cx,bx,CH*.58,bw,bh,'rgba(255,160,60,.18)','rgba(255,160,60,.45)');
+    cx.fillStyle='#ffcc88';cx.font=`bold ${Math.min(14,bh*.3)}px monospace`;
+    cx.fillText('🗑  RENSA MINA LOKALA SCORES',CW/2,CH*.58+bh*.64);
+
+    // Logga ut
+    btn(cx,bx,CH*.76,bw,Math.min(34,CH*.07),'rgba(255,255,255,.07)','rgba(255,255,255,.2)');
+    cx.fillStyle='rgba(255,255,255,.5)';cx.font=`${Math.min(11,CH*.022)}px monospace`;
+    cx.fillText('Logga ut',CW/2,CH*.76+Math.min(34,CH*.07)*.65);
+
     if(adminMsg){
-      cx.fillStyle=adminMsg.includes('✓')?'#44ff88':'#ff6644';
-      cx.font='bold 12px monospace';cx.fillText(adminMsg,CW/2,CH*.85);
+      cx.fillStyle=adminMsg.includes('✓')?'#44ff88':'#ff7755';
+      cx.font=`bold ${Math.min(12,CH*.024)}px monospace`;
+      cx.fillText(adminMsg,CW/2,CH*.9);
     }
-    cx.fillStyle='rgba(255,255,255,.25)';cx.font='11px monospace';
-    cx.fillText('✕ close — tap here',CW/2,CH-16);
+    cx.fillStyle='rgba(255,255,255,.22)';cx.font=`${Math.min(11,CH*.022)}px monospace`;
+    cx.fillText('✕ stäng',CW/2,CH-18);
   }
 }
 
 function adminClick(mx,my){
-  if(my>CH-30){adminState='off';adminPinInput='';adminMsg='';return;} // close
-  if(adminState==='pin'){
-    // Numpad
-    const keys=['1','2','3','4','5','6','7','8','9','⌫','0','✓'];
-    const bw=Math.min(70,CW*.22),bh=36,gap=6;
-    const gx=CW/2-bw*1.5-gap,gy=CH*.66;
-    keys.forEach((k,i)=>{
-      const col=i%3,row=Math.floor(i/3);
-      const bx=gx+col*(bw+gap),by=gy+row*(bh+gap);
-      if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+bh){
-        if(k==='⌫') adminPinInput=adminPinInput.slice(0,-1);
-        else if(k==='✓') verifyAdminPin();
-        else if(adminPinInput.length<8) adminPinInput+=k;
-      }
-    });
+  if(my>CH-30){adminState='off';adminMsg='';return;}
+  if(adminState==='signin'){
+    const bw=Math.min(280,CW*.75),bh=Math.min(52,CH*.1),bx=CW/2-bw/2,by=CH*.38;
+    if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+bh) adminGoogleSignIn();
   } else if(adminState==='panel'){
-    const bw=Math.min(260,CW*.7),bh=48,bx=CW/2-bw/2;
+    const bw=Math.min(280,CW*.75),bh=Math.min(52,CH*.1),bx=CW/2-bw/2;
     if(mx>=bx&&mx<=bx+bw){
-      if(my>=CH*.35&&my<=CH*.35+bh){
+      if(my>=CH*.32&&my<=CH*.32+bh){
         adminMsg='Rensar...';
-        fbAdminReset().then(ok=>{adminMsg=ok?'✓ Globala scores rensade!':'✗ Fel — kolla Firebase-regler';});
+        fbAdminReset().then(ok=>{adminMsg=ok?'✓ Globala scores dolda!':'✗ Fel — kolla Firebase-regler';});
       }
-      if(my>=CH*.62&&my<=CH*.62+bh){
+      if(my>=CH*.58&&my<=CH*.58+bh){
         S.scores=[];doSave();adminMsg='✓ Lokala scores rensade!';beep(440,.1);
+      }
+      const logoutH=Math.min(34,CH*.07);
+      if(my>=CH*.76&&my<=CH*.76+logoutH){
+        firebase.auth().signOut();adminState='signin';adminUser=null;adminMsg='';
       }
     }
   }
 }
 
-async function verifyAdminPin(){
-  const h=await sha256(adminPinInput);
-  if(h===ADMIN_PIN_HASH){
-    adminState='panel';adminMsg='';
-  } else {
-    adminMsg='Fel PIN – försök igen';
-    adminPinInput='';
+async function adminGoogleSignIn(){
+  adminMsg='Öppnar Google...';
+  try{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    const result=await firebase.auth().signInWithPopup(provider);
+    const email=result.user.email;
+    if(ADMIN_EMAILS.includes(email)){
+      adminState='panel';adminUser=email;adminMsg='';
+    } else {
+      adminMsg=`✗ ${email} har ej behörighet`;
+      firebase.auth().signOut();
+    }
+  }catch(e){
+    adminMsg='✗ Inloggning avbruten';
   }
 }
 function drawMenu(cx){
@@ -2204,4 +2210,5 @@ function loop(now){
 fbLoadAdminReset();
 requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(loop); });
 
-  </script></body></html>
+  </script>
+</body></html>
