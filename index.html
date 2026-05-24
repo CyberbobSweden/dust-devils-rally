@@ -84,7 +84,7 @@ canvas { display: block; }
   <canvas id="c"></canvas><script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260524.1114'; // auto-updated each build
+const BUILD = '20260524.1126'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -226,12 +226,13 @@ const ALL_TRACKS=[
    steps:18,tw:86,grass:'#304828',d1:'#808868',d2:'#989e80',edge:'#384028',
    tc:['#1e3818','#2a4820','#142810'],
    raw:[
-     {x:300,y:820},{x:600,y:840},{x:860,y:820},{x:1020,y:700},{x:1020,y:520},
-     {x:900,y:380},{x:720,y:260},{x:600,y:140},{x:760,y:70},{x:980,y:60},
-     {x:1180,y:140},{x:1320,y:300},{x:1200,y:460},{x:1060,y:560},{x:1180,y:700},
-     {x:1360,y:780},{x:1500,y:680},{x:1580,y:500},{x:1500,y:340},{x:1360,y:220},
-     {x:1480,y:100},{x:1660,y:80},{x:1820,y:200},{x:1880,y:400},{x:1820,y:600},
-     {x:1640,y:720},{x:1480,y:820}
+     {x:200,y:860},{x:500,y:870},{x:800,y:860},{x:1060,y:840},{x:1260,y:760},
+     {x:1380,y:620},{x:1340,y:460},{x:1200,y:340},{x:1020,y:260},{x:820,y:220},
+     {x:640,y:160},{x:520,y:80},{x:700,y:40},{x:940,y:40},{x:1160,y:100},
+     {x:1320,y:240},{x:1200,y:400},{x:1060,y:500},{x:1180,y:660},{x:1360,y:740},
+     {x:1520,y:660},{x:1600,y:500},{x:1540,y:320},{x:1400,y:200},{x:1520,y:80},
+     {x:1720,y:60},{x:1880,y:180},{x:1960,y:380},{x:1900,y:580},{x:1720,y:700},
+     {x:1540,y:800},{x:1360,y:860}
    ]},
 
   {name:'FIGURE EIGHT',laps:3,  sub:'Double loop crossing',
@@ -582,10 +583,10 @@ function doCollisions(cars){
         b.vx-=imp*nx; b.vy-=imp*ny;
         a.sp=a.vx*Math.sin(a.a)-a.vy*Math.cos(a.a);
         b.sp=b.vx*Math.sin(b.a)-b.vy*Math.cos(b.a);
-        // Only sound+shake when player involved
+        // Only sound+shake when player involved, with cooldown
         if(a.isP||b.isP){
           beep(110+Math.random()*70,.13,.25,'sawtooth');
-          camShake=1.5;
+          if(camShake<0.4) camShake=1.2; // don't reset if already shaking
         }
         const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
         for(let k=0;k<5;k++) addDust(mx,my,'#ffcc44',1);
@@ -664,9 +665,11 @@ class Car{
     const ramps=TDEF&&TDEF.ramps?TDEF.ramps:[];
 
     if(this.isP){
-      // Auto-gas always — NOS is manual boost
-      const maxSp=(nos&&this.nos>0)?def.top*def.nos:def.top;
-      this.sp=Math.min(this.sp+def.acc*dt,maxSp);
+      // Auto-gas — NOS gives instant kick + higher top speed
+      const nosOn=nos&&this.nos>0;
+      const maxSp=nosOn?def.top*def.nos:def.top;
+      const accMul=nosOn?4.5:1.0; // NOS = 4.5x acceleration rate
+      this.sp=Math.min(this.sp+def.acc*accMul*dt,maxSp);
       if(brake) this.sp=Math.max(this.sp-490*dt,-55);
       const tr=3.2*Math.min(1,Math.abs(this.sp)/110);
       if(L) this.a-=tr*dt;
@@ -1609,12 +1612,19 @@ function drawLeaderboard(cx){
   cx.textAlign='left';cx.fillStyle='rgba(255,255,255,.4)';cx.font='12px monospace';cx.fillText('< BACK',12,35);
   cx.textAlign='center';cx.fillStyle='#ffdd33';cx.font='bold 20px monospace';cx.fillText('LEADERBOARD',CW/2,35);
 
-  // Track filter pill
+  // Track filter — clickable arrows to cycle tracks
   const trackName=TDEF?TDEF.name:'ALL';
-  cx.fillStyle='rgba(255,221,51,.15)';cx.beginPath();cx.roundRect(CW/2-80,42,160,18,9);cx.fill();
-  cx.strokeStyle='rgba(255,221,51,.4)';cx.lineWidth=1;cx.stroke();
-  cx.fillStyle='rgba(255,221,51,.8)';cx.font='9px monospace';cx.textAlign='center';
-  cx.fillText('⛟ '+trackName+' — tap tabs to change',CW/2,54);
+  const tid2=S.currentTrack||0;
+  // Arrow buttons
+  btn(cx,CW/2-110,40,26,20,'rgba(255,221,51,.15)','rgba(255,221,51,.35)');
+  cx.fillStyle='rgba(255,221,51,.8)';cx.font='bold 13px monospace';cx.textAlign='center';cx.fillText('◀',CW/2-97,54);
+  btn(cx,CW/2+84,40,26,20,'rgba(255,221,51,.15)','rgba(255,221,51,.35)');
+  cx.fillText('▶',CW/2+97,54);
+  // Track name pill
+  cx.fillStyle='rgba(255,221,51,.12)';cx.beginPath();cx.roundRect(CW/2-82,40,164,20,10);cx.fill();
+  cx.strokeStyle='rgba(255,221,51,.3)';cx.lineWidth=1;cx.stroke();
+  cx.fillStyle='rgba(255,221,51,.9)';cx.font='bold 9px monospace';cx.textAlign='center';
+  cx.fillText((tid2+1)+'. '+trackName,CW/2,54);
 
   // Tabs
   ['🌍 GLOBAL','📱 LOCAL'].forEach((t,i)=>{
@@ -1627,6 +1637,9 @@ function drawLeaderboard(cx){
   if(lbTab===0){
     btn(cx,CW-60,62,50,22,'rgba(255,255,255,.1)','rgba(255,255,255,.25)');
     cx.fillStyle='rgba(255,255,255,.55)';cx.font='9px monospace';cx.textAlign='center';cx.fillText('↻ RELOAD',CW-35,77);
+  } else {
+    btn(cx,CW-80,62,70,22,'rgba(255,80,80,.15)','rgba(255,80,80,.4)');
+    cx.fillStyle='rgba(255,130,130,.8)';cx.font='9px monospace';cx.textAlign='center';cx.fillText('✕ CLEAR',CW-45,77);
   }
 
   const tid=S.currentTrack||0;
@@ -1702,11 +1715,36 @@ function drawLeaderboard(cx){
 }
 function leaderboardClick(mx,my){
   if(my<52&&mx<90){state='menu';return;}
+  // Track arrow navigation
+  if(my>=40&&my<=60){
+    const ul=S.unlockedTracks||[0];
+    const cur=S.currentTrack||0;
+    const idx=ul.indexOf(cur);
+    if(mx>=CW/2-110&&mx<=CW/2-84){ // ◀ prev track
+      const prev=ul[(idx-1+ul.length)%ul.length];
+      S.currentTrack=prev; activateTrack(prev); doSave();
+      globalScores=null; if(!scoresLoading) fbLoad(); return;
+    }
+    if(mx>=CW/2+84&&mx<=CW/2+110){ // ▶ next track
+      const next=ul[(idx+1)%ul.length];
+      S.currentTrack=next; activateTrack(next); doSave();
+      globalScores=null; if(!scoresLoading) fbLoad(); return;
+    }
+  }
+  // Tabs
   if(my>=62&&my<=84){
     if(mx>=CW/2-80&&mx<=CW/2+4){lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoad();}
     if(mx>=CW/2+4&&mx<=CW/2+82)lbTab=1;
   }
-  if(lbTab===0&&mx>=CW-60&&mx<=CW-10&&my>=62&&my<=84){globalScores=null;fbLoad();}
+  // Reload / Clear buttons
+  if(my>=62&&my<=84){
+    if(lbTab===0&&mx>=CW-60&&mx<=CW-10){globalScores=null;fbLoad();}
+    if(lbTab===1&&mx>=CW-80&&mx<=CW-10){ // clear local for this track
+      const tid=S.currentTrack||0;
+      S.scores=(S.scores||[]).filter(s=>s.track!==tid);
+      doSave(); beep(330,.1);
+    }
+  }
 }
 
 // ─── RESULTS ─────────────────────────────────────────────────────────────────
