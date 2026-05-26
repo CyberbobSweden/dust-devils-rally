@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260526.1717'; // auto-updated each build
+const BUILD = '20260526.1724'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2217,9 +2217,9 @@ document.addEventListener('keydown',e=>{
       else { state='leaderboard'; lbTab=0; if(!scoresLoading&&(!globalScores||scoresError))fbLoad(); }
     }
   }
-  if(['garage','tracks','leaderboard'].includes(state)&&(e.key==='Escape'||e.key==='Backspace')) state='menu'; bgmMenu();
+  if(['garage','tracks','leaderboard','settings'].includes(state)&&(e.key==='Escape'||e.key==='Backspace')){ state='menu'; bgmMenu(); }
   if((state==='racing'||state==='countdown')&&e.key==='Escape'){ stopEngine(); setScreech(false); state='menu'; bgmMenu(); }
-  if(state==='results'){ if(e.key==='Enter') startRace(); if(e.key==='Escape') state='menu'; bgmMenu(); }
+  if(state==='results'){ if(e.key==='Enter') startRace(); if(e.key==='Escape'){ state='menu'; bgmMenu(); } }
 });
 document.addEventListener('keyup',e=>{
   if(e.key==='ArrowLeft'||e.key==='a'){ KB.L=false; ctrlL=false; }
@@ -2329,6 +2329,9 @@ function loop(now){
 
     } else if(state==='results'){
       drawResults(G,cam,getScale(true));
+
+    } else if(state==='settings'){
+      drawSettings(G);
 
     } else {
       // countdown / racing
