@@ -97,7 +97,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260526.2120'; // auto-updated each build
+const BUILD = '20260526.2124'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1959,11 +1959,27 @@ function startAsGuest(){
   sfxBeep(440,.08);
 }
 
+async function checkDisplayName(user){
+  if(!user) return;
+  let name = user.displayName || '';
+  // Strip email prefix formatting - ask for proper game name
+  if(!name || name.includes('@') || name.includes('.')){
+    name = prompt('Choose your racer name (max 10 chars):','') || '';
+    name = name.trim().toUpperCase().substring(0,10);
+    if(name){
+      await user.updateProfile({displayName: name}).catch(()=>{});
+    }
+  }
+  S.name = (user.displayName||name||'RACER').toUpperCase().substring(0,10);
+  doSave();
+}
+
 async function doGoogleAuth(){
   if(typeof firebase==='undefined'){ startAsGuest(); return; }
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
-    await firebase.auth().signInWithPopup(provider);
+    const result = await firebase.auth().signInWithPopup(provider);
+    await checkDisplayName(result.user);
     authMsg=''; state='menu'; bgmMenu(); sfxBeep(660,.15);
   } catch(e){
     authMsgColor='#e74c3c';
@@ -1982,6 +1998,7 @@ async function doAuth(){
     } else {
       await auth.createUserWithEmailAndPassword(authEmail,authPwd);
     }
+    await checkDisplayName(firebase.auth().currentUser);
     authMsg=''; state='menu'; bgmMenu(); sfxBeep(660,.15);
   } catch(e){
     authMsgColor='#e74c3c';
@@ -2028,13 +2045,28 @@ function drawSettings(cx){
   _drawToggle(cx, CW*.72, y, sfxEnabled);
 
   // ── BACK button ──
-  y=CH*.88;
+  y=CH*.82;
   cx.fillStyle='#1a1a2e'; cx.strokeStyle='#f0a500'; cx.lineWidth=2;
-  const bw=CW*.4, bh=CH*.08;
+  const bw=CW*.4, bh=CH*.075;
   cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
   cx.fillStyle='#f0a500'; cx.textAlign='center'; cx.textBaseline='middle';
-  cx.font=`bold ${Math.round(CH*.038)}px monospace`;
+  cx.font=`bold ${Math.round(CH*.036)}px monospace`;
   cx.fillText('◀ BACK',CW/2,y);
+
+  // ── LOGOUT button ──
+  const user=typeof firebase!=='undefined'?firebase.auth().currentUser:null;
+  if(user){
+    y=CH*.92;
+    cx.fillStyle='#2a0a0a'; cx.strokeStyle='#e74c3c'; cx.lineWidth=2;
+    cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
+    cx.fillStyle='#e74c3c';
+    cx.font=`bold ${Math.round(CH*.032)}px monospace`;
+    cx.fillText('⏻ LOGOUT',CW/2,y);
+    // Show current user
+    cx.fillStyle='rgba(255,255,255,.4)';
+    cx.font=`${Math.round(CH*.024)}px monospace`;
+    cx.fillText((user.displayName||user.email||'').substring(0,24),CW/2,y+bh*.75);
+  }
 
   cx.restore();
 }
@@ -2068,7 +2100,17 @@ function settingsClick(mx,my){
   const sliderW=CW*.55, sliderX=CW*.22;
 
   // Back button
-  if(my>CH*.83){ state='menu'; sfxBeep(300,.08); return; }
+  if(my>CH*.78&&my<CH*.87){ state='menu'; sfxBeep(300,.08); return; }
+  // Logout button
+  if(my>CH*.87){
+    if(typeof firebase!=='undefined' && firebase.auth().currentUser){
+      firebase.auth().signOut().then(()=>{
+        state='auth'; authEmail=''; authPwd=''; authMsg='';
+        sfxBeep(220,.1);
+      });
+    }
+    return;
+  }
 
   // Music toggle
   let y=startY;
