@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260526.1702'; // auto-updated each build
+const BUILD = '20260526.1717'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1532,6 +1532,15 @@ function drawMenu(cx){
   if(adminTaps>0){cx.fillStyle='rgba(255,100,50,.85)';cx.font='bold 11px monospace';cx.textAlign='center';cx.fillText('\u2699 '+adminTaps+'/7',CW/2,15);}
   cx.textAlign='center';cx.fillStyle='rgba(255,180,80,.3)';cx.font='9px monospace';
   cx.fillText('Made with ❤ by Risingbob · Umeå, Sweden',CW/2,CH-6);
+
+  // ── Settings gear button top-right ──────────────────────────────────────
+  const _bx=CW-50, _by=50, _br=22;
+  cx.save(); cx.globalAlpha=0.85;
+  btn(cx,_bx-_br,_by-_br,_br*2,_br*2,'#1a1a2e','#f0a500',2);
+  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(_br*1.2)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('⚙',_bx,_by);
+  cx.restore();
 }
 
 function menuClick(mx,my){
