@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8">
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#111"><title>Dust Devils Rally</title>
-  <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+  <meta name="theme-color" content="#111">
+  <title>Dust Devils Rally</title>
+  <style>* { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
   background: #111;
@@ -75,18 +78,26 @@ canvas { display: block; }
 @media (orientation: portrait) and (max-width: 600px) {
   #rotate { display: flex; }
 }
-
-  </style>
+</style>
+</head>
+<body>
+  <div id="rotate"><span>&#8635;</span>Rotate to landscape!</div>
+  <canvas id="c"></canvas>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
   <script>
-    firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});
+    firebase.initializeApp({
+      apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",
+      authDomain:"dust-devils-rally.firebaseapp.com",
+      projectId:"dust-devils-rally",
+      appId:"1:772387413090:web:756355d8c70eb4f80fc53b",
+      databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"
+    });
   </script>
-  <script>
-// ─── VERSION ─────────────────────────────────────────────────────────────────
+  <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260526.2112'; // auto-updated each build
+const BUILD = '20260526.2120'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1949,6 +1960,7 @@ function startAsGuest(){
 }
 
 async function doGoogleAuth(){
+  if(typeof firebase==='undefined'){ startAsGuest(); return; }
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
     await firebase.auth().signInWithPopup(provider);
@@ -1960,6 +1972,7 @@ async function doGoogleAuth(){
 }
 
 async function doAuth(){
+  if(typeof firebase==='undefined'){ startAsGuest(); return; }
   if(!authEmail||!authPwd){ authMsg='Please fill all fields'; authMsgColor='#e74c3c'; return; }
   authMsg='...'; authMsgColor='#f0a500';
   try {
@@ -2265,14 +2278,7 @@ function resize(){ CW=C.width=innerWidth; CH=C.height=innerHeight; }
 resize(); window.addEventListener('resize',resize);
 if(!G.roundRect) G.roundRect=function(x,y,w,h){ this.rect(x,y,w,h); };
 
-// ─── NAME SCREEN ─────────────────────────────────────────────────────────────
-// Auth screen handles login now
-
-  // Try to restore progress from Firebase cloud save
-  const restored=await fbLoadProgress(n);
-  if(restored) showCloudRestoreMsg();
-  doSave();
-});
+// Auth screen handles login - see screens.js drawAuth/doAuth
 
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
@@ -2558,16 +2564,17 @@ function loop(now){
 }
 
 // ─── FIREBASE AUTH OBSERVER ───────────────────────────────────────────────────
-firebase.auth().onAuthStateChanged(user=>{
-  if(user){
-    // Already logged in - go straight to menu
-    if(state==='auth'){ state='menu'; }
-    S.name = user.displayName || user.email.split('@')[0].substring(0,10).toUpperCase();
-  }
-});
+if(typeof firebase !== 'undefined'){
+  firebase.auth().onAuthStateChanged(user=>{
+    if(user){
+      if(state==='auth'){ state='menu'; }
+      S.name = user.displayName || user.email.split('@')[0].substring(0,10).toUpperCase();
+    }
+  });
+}
 
 fbLoadAdminReset();
 requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(loop); });
-
-  </script>
-</body></html>
+</script>
+</body>
+</html>
