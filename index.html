@@ -79,14 +79,14 @@ canvas { display: block; }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-  <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b"});</script>
-</head><body>
-  <div id="rotate"><span>&#8635;</span>Rotate to landscape!</div>
-  <canvas id="c"></canvas>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+  <script>
+    firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});
+  </script>
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260526.2109'; // auto-updated each build
+const BUILD = '20260526.2112'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2266,24 +2266,21 @@ resize(); window.addEventListener('resize',resize);
 if(!G.roundRect) G.roundRect=function(x,y,w,h){ this.rect(x,y,w,h); };
 
 // ─── NAME SCREEN ─────────────────────────────────────────────────────────────
-const NS=document.getElementById('nscreen');
-const NF=document.getElementById('nfield');
-document.getElementById('nbtn').addEventListener('click',async()=>{
-  const n=NF.value.trim().toUpperCase(); if(!n) return;
-  S.name=n; NS.style.display='none'; NF.blur(); initAudio();
+// Auth screen handles login now
+
   // Try to restore progress from Firebase cloud save
   const restored=await fbLoadProgress(n);
   if(restored) showCloudRestoreMsg();
   doSave();
 });
-NF.addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('nbtn').click(); });
+
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 loadSave();
 if(!S.unlockedTracks) S.unlockedTracks=[0];
 if(!S.bestTimes) S.bestTimes={};
 activateTrack(S.currentTrack||0);
-if(!S.name) NS.style.display='flex';
+
 
 // ─── GAME STATE ───────────────────────────────────────────────────────────────
 let state='auth', cdN=3, cdT=0, raceT=0;
