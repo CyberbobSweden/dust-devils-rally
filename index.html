@@ -97,7 +97,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260526.2130'; // auto-updated each build
+const BUILD = '20260526.2137'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1959,16 +1959,6 @@ function startAsGuest(){
   sfxBeep(440,.08);
 }
 
-// Handle Google redirect result when page loads
-if(typeof firebase!=='undefined'){
-  firebase.auth().getRedirectResult().then(async result=>{
-    if(result&&result.user){
-      await checkDisplayName(result.user);
-      state='menu'; bgmMenu();
-    }
-  }).catch(()=>{});
-}
-
 async function checkDisplayName(user){
   if(!user) return;
   let name = user.displayName || '';
@@ -2646,6 +2636,21 @@ if(typeof firebase !== 'undefined'){
 }
 
 fbLoadAdminReset();
+// ─── GOOGLE REDIRECT RESULT ───────────────────────────────────────────────────
+if(typeof firebase !== 'undefined'){
+  firebase.auth().getRedirectResult().then(async result=>{
+    if(result && result.user){
+      await checkDisplayName(result.user);
+      state='menu'; bgmMenu();
+    }
+  }).catch(e=>{
+    // Show error on auth screen
+    authMsg = e.message || 'Google sign-in failed';
+    authMsgColor = '#e74c3c';
+    state = 'auth';
+  });
+}
+
 requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(loop); });
 </script>
 </body>
