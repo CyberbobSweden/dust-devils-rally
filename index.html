@@ -89,7 +89,7 @@ canvas { display: block; }
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260526.1653'; // auto-updated each build
+const BUILD = '20260526.1657'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -365,7 +365,9 @@ function activateTrack(idx){
 let AC=null,_engNodes=null,scrSrc=null,_scrOn=false;
 
 function initAudio(){
-  if(!AC) try{ AC=new(window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+  if(!AC){ try{ AC=new(window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(AC&&AC.state==='suspended') AC.resume();
+  bgmPlay(); // start music on first user interaction
 }
 
 function beep(freq,dur,vol=0.22,type='square'){
@@ -1784,7 +1786,7 @@ function garageClick(mx,my){
     const col=i%cols,row=Math.floor(i/cols);
     const cx2=startX+col*(cW+pad),cy2=52-scroll.garage+row*(cH+pad)+pad;
     if(mx>=cx2&&mx<=cx2+cW&&my>=cy2&&my<=cy2+cH){
-      if(S.unlocked.includes(def.id)){S.selected=def.id;doSave();}
+      if(S.unlocked.includes(def.id)){S.selected=def.id;doSave();beep(440,.08);}
       else if(S.coins>=def.price){S.coins-=def.price;S.unlocked.push(def.id);S.selected=def.id;doSave();beep(660,.08);setTimeout(()=>beep(880,.2),110);}
       else beep(180,.15,.3,'sawtooth');
     }
