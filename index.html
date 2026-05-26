@@ -82,14 +82,11 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b"});</script>
 </head><body>
   <div id="rotate"><span>&#8635;</span>Rotate to landscape!</div>
-  <div id="nscreen"><p>DUST DEVILS RALLY</p><p class="sub">Enter your racer name</p>
-    <input id="nfield" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
-    <button id="nbtn">START RACING!</button></div>
   <canvas id="c"></canvas>
   <script>
 // ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260526.1724'; // auto-updated each build
+const BUILD = '20260526.1829'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1833,6 +1830,135 @@ function garageClick(mx,my){
 }
 
 
+
+// ─── AUTH SCREEN ─────────────────────────────────────────────────────────────
+let authMode='login'; // 'login' or 'register'
+let authEmail='', authPwd='', authMsg='', authMsgColor='#e74c3c';
+
+function drawAuth(cx){
+  cx.save();
+  cx.fillStyle='#0d0d1a'; cx.fillRect(0,0,CW,CH);
+
+  // Title
+  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.06)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('DUST DEVILS RALLY',CW/2,CH*.10);
+
+  // Mode tabs
+  const tabW=CW*.38, tabH=CH*.065, tabY=CH*.20;
+  ['LOGIN','REGISTER'].forEach((t,i)=>{
+    const tx=CW/2+(i===0?-tabW*.55:tabW*.55);
+    const active=(i===0&&authMode==='login')||(i===1&&authMode==='register');
+    cx.fillStyle=active?'#f0a500':'#1a1a2e';
+    cx.strokeStyle=active?'#f0a500':'#444'; cx.lineWidth=2;
+    cx.beginPath(); cx.roundRect(tx-tabW/2,tabY-tabH/2,tabW,tabH,6); cx.fill(); cx.stroke();
+    cx.fillStyle=active?'#000':'#888';
+    cx.font=`bold ${Math.round(CH*.032)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText(t,tx,tabY);
+  });
+
+  // Input fields
+  const fw=CW*.78, fh=CH*.072, fx=CW/2-fw/2;
+  let fy=CH*.34;
+
+  // Email field
+  cx.fillStyle='#1a1a2e'; cx.strokeStyle=authEmail?'#f0a500':'#444'; cx.lineWidth=2;
+  cx.beginPath(); cx.roundRect(fx,fy,fw,fh,6); cx.fill(); cx.stroke();
+  cx.fillStyle=authEmail?'#fff':'#555';
+  cx.font=`${Math.round(CH*.032)}px monospace`;
+  cx.textAlign='left'; cx.textBaseline='middle';
+  cx.fillText(authEmail||'EMAIL',fx+12,fy+fh/2);
+
+  // Password field
+  fy+=fh+CH*.025;
+  cx.fillStyle='#1a1a2e'; cx.strokeStyle=authPwd?'#f0a500':'#444'; cx.lineWidth=2;
+  cx.beginPath(); cx.roundRect(fx,fy,fw,fh,6); cx.fill(); cx.stroke();
+  cx.fillStyle=authPwd?'#fff':'#555';
+  cx.font=`${Math.round(CH*.032)}px monospace`;
+  cx.textAlign='left'; cx.textBaseline='middle';
+  cx.fillText(authPwd?'●'.repeat(Math.min(authPwd.length,16)):'PASSWORD',fx+12,fy+fh/2);
+
+  // Message
+  if(authMsg){
+    cx.fillStyle=authMsgColor; cx.textAlign='center';
+    cx.font=`${Math.round(CH*.028)}px monospace`;
+    cx.fillText(authMsg,CW/2,fy+fh+CH*.04);
+  }
+
+  // Submit button
+  fy+=fh+CH*.10;
+  cx.fillStyle='#f0a500'; cx.strokeStyle='#f0a500'; cx.lineWidth=2;
+  cx.beginPath(); cx.roundRect(CW/2-fw/2,fy,fw,fh*1.1,8); cx.fill();
+  cx.fillStyle='#000'; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.font=`bold ${Math.round(CH*.038)}px monospace`;
+  cx.fillText(authMode==='login'?'▶ PLAY':'▶ CREATE ACCOUNT',CW/2,fy+fh*.55);
+
+  // Skip / play as guest
+  cx.fillStyle='rgba(255,255,255,.35)'; cx.textAlign='center';
+  cx.font=`${Math.round(CH*.028)}px monospace`;
+  cx.fillText('PLAY AS GUEST ↓',CW/2,CH*.92);
+
+  cx.restore();
+}
+
+function authClick(mx,my){
+  const tabY=CH*.20, tabH=CH*.065, tabW=CW*.38;
+  // Tab switch
+  if(Math.abs(my-tabY)<tabH){
+    if(mx<CW/2){ authMode='login'; authMsg=''; }
+    else { authMode='register'; authMsg=''; }
+    sfxBeep(440,.08); return;
+  }
+  // Guest
+  if(my>CH*.88){ startAsGuest(); return; }
+
+  const fw=CW*.78, fh=CH*.072, fx=CW/2-fw/2;
+  let fy=CH*.34;
+  // Email tap
+  if(my>=fy&&my<=fy+fh){ promptField('email'); return; }
+  fy+=fh+CH*.025;
+  // Password tap
+  if(my>=fy&&my<=fy+fh){ promptField('password'); return; }
+  fy+=fh+CH*.10;
+  // Submit
+  if(my>=fy&&my<=fy+fh*1.1){ doAuth(); return; }
+}
+
+function promptField(field){
+  const val = prompt(field==='email'?'Enter email:':'Enter password:','');
+  if(val===null) return;
+  if(field==='email') authEmail=val.trim();
+  else authPwd=val;
+}
+
+function startAsGuest(){
+  authMsg=''; state='menu'; bgmMenu();
+  sfxBeep(440,.08);
+}
+
+async function doAuth(){
+  if(!authEmail||!authPwd){ authMsg='Please fill all fields'; authMsgColor='#e74c3c'; return; }
+  authMsg='...'; authMsgColor='#f0a500';
+  try {
+    const auth=firebase.auth();
+    if(authMode==='login'){
+      await auth.signInWithEmailAndPassword(authEmail,authPwd);
+    } else {
+      await auth.createUserWithEmailAndPassword(authEmail,authPwd);
+    }
+    authMsg=''; state='menu'; bgmMenu(); sfxBeep(660,.15);
+  } catch(e){
+    authMsgColor='#e74c3c';
+    if(e.code==='auth/user-not-found') authMsg='No account found';
+    else if(e.code==='auth/wrong-password') authMsg='Wrong password';
+    else if(e.code==='auth/email-already-in-use') authMsg='Email already used';
+    else if(e.code==='auth/weak-password') authMsg='Password too short (6+)';
+    else if(e.code==='auth/invalid-email') authMsg='Invalid email';
+    else authMsg='Error: '+e.code;
+  }
+}
+
 // ─── SETTINGS SCREEN ─────────────────────────────────────────────────────────
 function drawSettings(cx){
   cx.save();
@@ -1850,12 +1976,12 @@ function drawSettings(cx){
   // ── MUSIC ON/OFF ──
   let y=startY;
   cx.fillStyle='#aaa'; cx.font=`${Math.round(CH*.038)}px monospace`;
-  cx.textAlign='left'; cx.fillText('MUSIK',labelX,y);
+  cx.textAlign='left'; cx.fillText('MUSIC',labelX,y);
   _drawToggle(cx, CW*.72, y, bgmEnabled);
 
   // ── MUSIC VOLUME ──
   y+=rowH;
-  cx.fillStyle='#aaa'; cx.fillText('VOLYM',labelX,y);
+  cx.fillStyle='#aaa'; cx.fillText('VOLUME',labelX,y);
   _drawSlider(cx, sliderX, y, sliderW, bgmVolume);
   cx.fillStyle='#f0a500'; cx.textAlign='right';
   cx.fillText(Math.round(bgmVolume*100)+'%', valX, y);
@@ -1863,7 +1989,7 @@ function drawSettings(cx){
   // ── SFX ON/OFF ──
   y+=rowH;
   cx.fillStyle='#aaa'; cx.textAlign='left';
-  cx.fillText('LJUDEFFEKTER',labelX,y);
+  cx.fillText('SOUND FX',labelX,y);
   _drawToggle(cx, CW*.72, y, sfxEnabled);
 
   // ── BACK button ──
@@ -1873,7 +1999,7 @@ function drawSettings(cx){
   cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
   cx.fillStyle='#f0a500'; cx.textAlign='center'; cx.textBaseline='middle';
   cx.font=`bold ${Math.round(CH*.038)}px monospace`;
-  cx.fillText('◀ TILLBAKA',CW/2,y);
+  cx.fillText('◀ BACK',CW/2,y);
 
   cx.restore();
 }
@@ -2138,7 +2264,7 @@ activateTrack(S.currentTrack||0);
 if(!S.name) NS.style.display='flex';
 
 // ─── GAME STATE ───────────────────────────────────────────────────────────────
-let state='menu', cdN=3, cdT=0, raceT=0;
+let state='auth', cdN=3, cdT=0, raceT=0;
 let cam={x:0,y:0}, cars=[];
 let camRot=0, camShake=0, camSX=0, camSY=0;
 
@@ -2170,9 +2296,11 @@ C.addEventListener('touchstart',e=>{
   if(state==='garage') scrollTouchStart('garage',p.y);
   else if(state==='tracks') scrollTouchStart('tracks',p.y);
   if(state==='racing'||state==='countdown') raceClick(p.x,p.y);
-  if(state==='menu')        menuClick(p.x,p.y);
+  if(state==='auth')        authClick(p.x,p.y);
+  else if(state==='menu')   menuClick(p.x,p.y);
   else if(state==='leaderboard') leaderboardClick(p.x,p.y);
   else if(state==='settings') settingsClick(p.x,p.y);
+  else if(state==='auth')    authClick(e.clientX,e.clientY);
   else if(state==='results') resultsClick(p.x,p.y);
   updCtrl();
 },{passive:false});
@@ -2313,7 +2441,10 @@ function loop(now){
   G.clearRect(0,0,CW,CH);
 
   try {
-    if(state==='menu'){
+    if(state==='auth'){
+      drawAuth(G);
+
+    } else if(state==='menu'){
       drawMenu(G);
 
     } else if(state==='garage'){
@@ -2406,6 +2537,16 @@ function loop(now){
 
   requestAnimationFrame(loop);
 }
+
+// ─── FIREBASE AUTH OBSERVER ───────────────────────────────────────────────────
+firebase.auth().onAuthStateChanged(user=>{
+  if(user){
+    // Already logged in - go straight to menu
+    if(state==='auth'){ state='menu'; }
+    S.name = user.displayName || user.email.split('@')[0].substring(0,10).toUpperCase();
+  }
+});
+
 fbLoadAdminReset();
 requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(loop); });
 
