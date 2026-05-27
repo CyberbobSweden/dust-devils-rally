@@ -97,7 +97,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260526.2147'; // auto-updated each build
+const BUILD = '20260527.0054'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1905,13 +1905,16 @@ function drawAuth(cx){
   cx.font=`bold ${Math.round(CH*.038)}px monospace`;
   cx.fillText(authMode==='login'?'▶ PLAY':'▶ CREATE ACCOUNT',CW/2,fy+fh*.55);
 
-  // Google button
+  // Google button - only on web (not in Android app)
+  const isApp=!!(window.Capacitor||navigator.userAgent.includes('wv'));
   const gw=CW*.78, gh=fh, gx=CW/2-gw/2, gy=fy+fh*1.1+CH*.025;
-  cx.fillStyle='#fff'; cx.strokeStyle='#ddd'; cx.lineWidth=2;
-  cx.beginPath(); cx.roundRect(gx,gy,gw,gh,8); cx.fill(); cx.stroke();
-  cx.font=`bold ${Math.round(CH*.032)}px monospace`;
-  cx.fillStyle='#444'; cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText('G  CONTINUE WITH GOOGLE',CW/2,gy+gh/2);
+  if(!isApp){
+    cx.fillStyle='#fff'; cx.strokeStyle='#ddd'; cx.lineWidth=2;
+    cx.beginPath(); cx.roundRect(gx,gy,gw,gh,8); cx.fill(); cx.stroke();
+    cx.font=`bold ${Math.round(CH*.032)}px monospace`;
+    cx.fillStyle='#444'; cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText('G  CONTINUE WITH GOOGLE',CW/2,gy+gh/2);
+  }
 
   // Guest
   cx.fillStyle='rgba(255,255,255,.35)'; cx.textAlign='center';
@@ -1932,8 +1935,9 @@ function authClick(mx,my){
   // Guest
   if(my>CH*.89){ startAsGuest(); return; }
 
-  // Google button area (approx)
-  if(my>CH*.74&&my<CH*.84){ doGoogleAuth(); return; }
+  // Google button - web only
+  const _isApp=!!(window.Capacitor||navigator.userAgent.includes('wv'));
+  if(!_isApp&&my>CH*.74&&my<CH*.84){ doGoogleAuth(); return; }
 
   const fw=CW*.78, fh=CH*.072, fx=CW/2-fw/2;
   let fy=CH*.34;
