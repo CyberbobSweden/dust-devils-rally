@@ -97,7 +97,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260527.0135'; // auto-updated each build
+const BUILD = '20260527.0142'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2438,13 +2438,15 @@ C.addEventListener('touchmove',e=>{
 },{passive:false});
 C.addEventListener('click',e=>{
   initAudio();
-  if(state==='menu')             menuClick(e.clientX,e.clientY);
-  else if(state==='garage')      garageClick(e.clientX,e.clientY);
-  else if(state==='tracks')      trackSelectClick(e.clientX,e.clientY);
-  else if(state==='leaderboard') leaderboardClick(e.clientX,e.clientY);
-  else if(state==='settings') settingsClick(e.clientX,e.clientY);
-  else if(state==='results')     resultsClick(e.clientX,e.clientY);
-  else if(state==='racing'||state==='countdown') raceClick(e.clientX,e.clientY);
+  const p=touchXY(e);
+  if(state==='auth')             authClick(p.x,p.y);
+  else if(state==='menu')        menuClick(p.x,p.y);
+  else if(state==='garage')      garageClick(p.x,p.y);
+  else if(state==='tracks')      trackSelectClick(p.x,p.y);
+  else if(state==='leaderboard') leaderboardClick(p.x,p.y);
+  else if(state==='settings')    settingsClick(p.x,p.y);
+  else if(state==='results')     resultsClick(p.x,p.y);
+  else if(state==='racing'||state==='countdown') raceClick(p.x,p.y);
 });
 document.addEventListener('keydown',e=>{
   initAudio();
