@@ -97,7 +97,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260527.0908'; // auto-updated each build
+const BUILD = '20260527.1644'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1069,7 +1069,7 @@ class Car{
     const scaleMap={wide:1.12,tall:1.06,low:.9,compact:.85,long:.72,f1b:.72,vintage:1.0,suv:1.1,aero:.95,std:1.0};
     const px=Math.max(1.5,Math.round(Math.min(17*SC*(scaleMap[def.body]||1)/8*1.6,30*SC*(scaleMap[def.body]||1)/16*1.2)));
     const dW=px*8,dH=px*16,x0=-dW/2,y0=-dH/2;
-    cx.save();cx.translate(sx,sy);cx.rotate(this.a+Math.PI);cx.globalAlpha=0.28;
+    cx.save();cx.translate(sx,sy);cx.rotate(this.a+Math.PI);cx.globalAlpha=0.45;
     const spr=CAR_SPRITES[def.body]||CAR_SPRITES.std;
     if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
       cx.imageSmoothingEnabled=false;
@@ -1563,7 +1563,7 @@ function drawMenu(cx){
 function menuClick(mx,my){
   // Spotify button bottom-left
   if(mx<=60&&my>=CH-46){
-    const url='https://open.spotify.com/artist/search/CTRL%20NOISE';
+    const url='https://open.spotify.com/artist/1zRFjbrsphxLI5HNu2SJk0';
     window.open(url,'_blank'); return;
   }
   // Settings button top-right
@@ -2526,7 +2526,12 @@ function startRace(){ bgmRace();
   cam=g.cam;
   parts=[]; driftPops=[];
   ghostData=null;
-  if(S.ghostEnabled) fbLoadGhost(S.currentTrack||0);
+  if(S.ghostEnabled){
+    fbLoadGhost(S.currentTrack||0).then(()=>{
+      if(ghostData) console.log('Ghost loaded:',ghostData.name,ghostData.frames?.length,'frames');
+      else console.log('No ghost data for track',S.currentTrack);
+    });
+  }
   cdN=3; cdT=0; raceT=0;
   camRot=0; camShake=0; camSX=0; camSY=0;
   state='countdown';
