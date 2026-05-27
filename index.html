@@ -97,7 +97,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260527.0142'; // auto-updated each build
+const BUILD = '20260527.0908'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1541,6 +1541,15 @@ function drawMenu(cx){
   cx.textAlign='center';cx.fillStyle='rgba(255,180,80,.3)';cx.font='9px monospace';
   cx.fillText('Made with ❤ by Risingbob · Umeå, Sweden',CW/2,CH-6);
 
+  // ── Spotify button bottom-left ───────────────────────────────────────────
+  const _spX=42, _spY=CH-28, _spR=18;
+  cx.save(); cx.globalAlpha=0.75;
+  btn(cx,_spX-_spR,_spY-_spR,_spR*2,_spR*2,'#1DB954','#1DB954',0);
+  cx.fillStyle='#000'; cx.font=`bold ${Math.round(_spR*1.1)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('♫',_spX,_spY);
+  cx.restore();
+
   // ── Settings gear button top-right ──────────────────────────────────────
   const _bx=CW-50, _by=50, _br=22;
   cx.save(); cx.globalAlpha=0.85;
@@ -1552,6 +1561,11 @@ function drawMenu(cx){
 }
 
 function menuClick(mx,my){
+  // Spotify button bottom-left
+  if(mx<=60&&my>=CH-46){
+    const url='https://open.spotify.com/artist/search/CTRL%20NOISE';
+    window.open(url,'_blank'); return;
+  }
   // Settings button top-right
   const mBtnX=CW-50, mBtnY=50, mBtnR=22;
   if(mx>=mBtnX-mBtnR&&mx<=mBtnX+mBtnR&&my>=mBtnY-mBtnR&&my<=mBtnY+mBtnR){
@@ -2618,12 +2632,17 @@ function loop(now){
       // Firebase ghost car (if enabled + loaded)
       if(ghostData&&ghostData.frames&&ghostData.frames.length>1){
         const _gf=ghostData.frames;
-        const _gi=_gf.findIndex(f=>f.t>=raceT%(_gf[_gf.length-1].t||30));
-        if(_gi>=0){
-          const _gp=_gf[_gi];
-          const _gDef=CAR_DEFS.find(d=>d.id===ghostData.car)||CAR_DEFS[0];
-          cars[0].drawGhost.call({...cars[0],x:_gp.x,y:_gp.y,a:_gp.a,def:_gDef},G,cam,SC);
+        const _lastT=_gf[_gf.length-1].t||30;
+        const _t=raceT%_lastT;
+        // Find closest frame (robust lookup)
+        let _gi=0;
+        for(let i=1;i<_gf.length;i++){
+          if(_gf[i].t<=_t) _gi=i;
+          else break;
         }
+        const _gp=_gf[_gi];
+        const _gDef=CAR_DEFS.find(d=>d.id===ghostData.car)||CAR_DEFS[0];
+        cars[0].drawGhost.call({...cars[0],x:_gp.x,y:_gp.y,a:_gp.a,def:_gDef},G,cam,SC);
       }
       [...cars].sort((a,b)=>a.y-b.y).forEach(c=>c.draw(G,cam,SC));
       G.restore();
