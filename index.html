@@ -97,7 +97,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260527.0054'; // auto-updated each build
+const BUILD = '20260527.0129'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1905,6 +1905,13 @@ function drawAuth(cx){
   cx.font=`bold ${Math.round(CH*.038)}px monospace`;
   cx.fillText(authMode==='login'?'▶ PLAY':'▶ CREATE ACCOUNT',CW/2,fy+fh*.55);
 
+  // Forgot password link (login mode only)
+  if(authMode==='login'){
+    cx.fillStyle='rgba(240,165,0,0.7)'; cx.textAlign='center';
+    cx.font=`${Math.round(CH*.026)}px monospace`;
+    cx.fillText('Forgot password?',CW/2,fy+fh+CH*.045);
+  }
+
   // Google button - only on web (not in Android app)
   const isApp=!!(window.Capacitor||navigator.userAgent.includes('wv'));
   const gw=CW*.78, gh=fh, gx=CW/2-gw/2, gy=fy+fh*1.1+CH*.025;
@@ -1946,6 +1953,8 @@ function authClick(mx,my){
   fy+=fh+CH*.025;
   // Password tap
   if(my>=fy&&my<=fy+fh){ promptField('password'); return; }
+  // Forgot password
+  if(authMode==='login'&&my>=fy+fh&&my<=fy+fh+CH*.07){ doForgotPassword(); return; }
   fy+=fh+CH*.10;
   // Submit
   if(my>=fy&&my<=fy+fh*1.1){ doAuth(); return; }
@@ -1995,6 +2004,19 @@ async function doGoogleAuth(){
       // GitHub Pages / Chrome COOP issue - suggest email or app
       authMsg='Use email login or try the app';
     }
+  }
+}
+
+async function doForgotPassword(){
+  if(typeof firebase==='undefined'){ authMsg='Not available'; return; }
+  const email=authEmail||(prompt('Enter your email:')||'').trim();
+  if(!email){ authMsg='Enter your email first'; authMsgColor='#e74c3c'; return; }
+  try {
+    await firebase.auth().sendPasswordResetEmail(email);
+    authMsg='Reset email sent! Check your inbox.'; authMsgColor='#2ecc71';
+  } catch(e){
+    authMsgColor='#e74c3c';
+    authMsg = e.code==='auth/user-not-found'?'No account found':'Error sending email';
   }
 }
 
