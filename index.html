@@ -98,7 +98,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260527.1653'; // auto-updated each build
+const BUILD = '20260527.1707'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -960,8 +960,9 @@ class Car{
         if(this.isP){beep(660,.08);setTimeout(()=>beep(880,.2),100);}
       }
     }
-    // Record ghost frames every 80ms throughout all laps
-    if(this.isP&&Math.floor(raceTime*12.5)!==Math.floor((raceTime-dt)*12.5)){
+    // Record ghost at 20fps using timer
+    if(this.isP&&raceTime-(this._lastGhostT||0)>=0.05){
+      this._lastGhostT=raceTime;
       this.ghostFrames.push({t:raceTime-this._lapStartT,x:this.x,y:this.y,a:this.a});
     }
 
@@ -2637,20 +2638,28 @@ function loop(now){
       drawTrack(G,cam,SC);
       drawRamps(G,cam,SC);
       drawParts(G,cam,SC);
-      // Firebase ghost car (if enabled + loaded)
+      // Firebase ghost car with interpolation
       if(ghostData&&ghostData.frames&&ghostData.frames.length>1){
         const _gf=ghostData.frames;
         const _lastT=_gf[_gf.length-1].t||30;
         const _t=raceT%_lastT;
-        // Find closest frame (robust lookup)
+        // Find surrounding frames for interpolation
         let _gi=0;
         for(let i=1;i<_gf.length;i++){
-          if(_gf[i].t<=_t) _gi=i;
-          else break;
+          if(_gf[i].t<=_t) _gi=i; else break;
         }
-        const _gp=_gf[_gi];
+        const _a=_gf[_gi], _b=_gf[Math.min(_gi+1,_gf.length-1)];
+        const _span=_b.t-_a.t;
+        const _frac=_span>0?Math.min(1,(_t-_a.t)/_span):0;
+        // Lerp position, lerp angle (handle wrap)
+        const _ix=_a.x+(_b.x-_a.x)*_frac;
+        const _iy=_a.y+(_b.y-_a.y)*_frac;
+        let _da=_b.a-_a.a;
+        if(_da>Math.PI) _da-=Math.PI*2;
+        if(_da<-Math.PI) _da+=Math.PI*2;
+        const _ia=_a.a+_da*_frac;
         const _gDef=CAR_DEFS.find(d=>d.id===ghostData.car)||CAR_DEFS[0];
-        cars[0].drawGhost.call({...cars[0],x:_gp.x,y:_gp.y,a:_gp.a,def:_gDef},G,cam,SC);
+        cars[0].drawGhost.call({...cars[0],x:_ix,y:_iy,a:_ia,def:_gDef},G,cam,SC);
       }
       [...cars].sort((a,b)=>a.y-b.y).forEach(c=>c.draw(G,cam,SC));
       G.restore();
