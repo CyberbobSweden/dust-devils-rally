@@ -97,7 +97,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260527.0129'; // auto-updated each build
+const BUILD = '20260527.0135'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1869,64 +1869,64 @@ function drawAuth(cx){
     cx.fillText(t,tx,tabY);
   });
 
-  // Input fields
-  const fw=CW*.78, fh=CH*.072, fx=CW/2-fw/2;
-  let fy=CH*.34;
+  // Input fields - fixed positions
+  const fw=CW*.78, fh=CH*.068, fx=CW/2-fw/2;
 
-  // Email field
+  // Email @ 28%
+  let fy=CH*.28;
   cx.fillStyle='#1a1a2e'; cx.strokeStyle=authEmail?'#f0a500':'#444'; cx.lineWidth=2;
   cx.beginPath(); cx.roundRect(fx,fy,fw,fh,6); cx.fill(); cx.stroke();
   cx.fillStyle=authEmail?'#fff':'#555';
-  cx.font=`${Math.round(CH*.032)}px monospace`;
+  cx.font=`${Math.round(CH*.03)}px monospace`;
   cx.textAlign='left'; cx.textBaseline='middle';
   cx.fillText(authEmail||'EMAIL',fx+12,fy+fh/2);
 
-  // Password field
-  fy+=fh+CH*.025;
+  // Password @ 38%
+  fy=CH*.38;
   cx.fillStyle='#1a1a2e'; cx.strokeStyle=authPwd?'#f0a500':'#444'; cx.lineWidth=2;
   cx.beginPath(); cx.roundRect(fx,fy,fw,fh,6); cx.fill(); cx.stroke();
   cx.fillStyle=authPwd?'#fff':'#555';
-  cx.font=`${Math.round(CH*.032)}px monospace`;
+  cx.font=`${Math.round(CH*.03)}px monospace`;
   cx.textAlign='left'; cx.textBaseline='middle';
   cx.fillText(authPwd?'●'.repeat(Math.min(authPwd.length,16)):'PASSWORD',fx+12,fy+fh/2);
 
-  // Message
+  // Forgot password @ 48% (login only)
+  if(authMode==='login'){
+    cx.fillStyle='rgba(240,165,0,0.8)'; cx.textAlign='center';
+    cx.font=`${Math.round(CH*.027)}px monospace`;
+    cx.fillText('Forgot password?',CW/2,CH*.485);
+  }
+
+  // Message @ 52%
   if(authMsg){
     cx.fillStyle=authMsgColor; cx.textAlign='center';
-    cx.font=`${Math.round(CH*.028)}px monospace`;
-    cx.fillText(authMsg,CW/2,fy+fh+CH*.04);
+    cx.font=`${Math.round(CH*.027)}px monospace`;
+    cx.fillText(authMsg,CW/2,CH*.535);
   }
 
-  // Submit button
-  fy+=fh+CH*.10;
-  cx.fillStyle='#f0a500'; cx.strokeStyle='#f0a500'; cx.lineWidth=2;
+  // Submit @ 58%
+  fy=CH*.575;
+  cx.fillStyle='#f0a500'; cx.lineWidth=0;
   cx.beginPath(); cx.roundRect(CW/2-fw/2,fy,fw,fh*1.1,8); cx.fill();
   cx.fillStyle='#000'; cx.textAlign='center'; cx.textBaseline='middle';
-  cx.font=`bold ${Math.round(CH*.038)}px monospace`;
+  cx.font=`bold ${Math.round(CH*.036)}px monospace`;
   cx.fillText(authMode==='login'?'▶ PLAY':'▶ CREATE ACCOUNT',CW/2,fy+fh*.55);
 
-  // Forgot password link (login mode only)
-  if(authMode==='login'){
-    cx.fillStyle='rgba(240,165,0,0.7)'; cx.textAlign='center';
-    cx.font=`${Math.round(CH*.026)}px monospace`;
-    cx.fillText('Forgot password?',CW/2,fy+fh+CH*.045);
-  }
-
-  // Google button - only on web (not in Android app)
+  // Google @ 70% (web only)
   const isApp=!!(window.Capacitor||navigator.userAgent.includes('wv'));
-  const gw=CW*.78, gh=fh, gx=CW/2-gw/2, gy=fy+fh*1.1+CH*.025;
   if(!isApp){
+    fy=CH*.695;
     cx.fillStyle='#fff'; cx.strokeStyle='#ddd'; cx.lineWidth=2;
-    cx.beginPath(); cx.roundRect(gx,gy,gw,gh,8); cx.fill(); cx.stroke();
-    cx.font=`bold ${Math.round(CH*.032)}px monospace`;
+    cx.beginPath(); cx.roundRect(CW/2-fw/2,fy,fw,fh,8); cx.fill(); cx.stroke();
+    cx.font=`bold ${Math.round(CH*.03)}px monospace`;
     cx.fillStyle='#444'; cx.textAlign='center'; cx.textBaseline='middle';
-    cx.fillText('G  CONTINUE WITH GOOGLE',CW/2,gy+gh/2);
+    cx.fillText('G  CONTINUE WITH GOOGLE',CW/2,fy+fh/2);
   }
 
-  // Guest
+  // Guest @ 88%
   cx.fillStyle='rgba(255,255,255,.35)'; cx.textAlign='center';
-  cx.font=`${Math.round(CH*.028)}px monospace`;
-  cx.fillText('PLAY AS GUEST ↓',CW/2,CH*.93);
+  cx.font=`${Math.round(CH*.027)}px monospace`;
+  cx.fillText('PLAY AS GUEST ↓',CW/2,CH*.88);
 
   cx.restore();
 }
@@ -1940,24 +1940,21 @@ function authClick(mx,my){
     sfxBeep(440,.08); return;
   }
   // Guest
-  if(my>CH*.89){ startAsGuest(); return; }
+  if(my>=CH*.84){ startAsGuest(); return; }
 
-  // Google button - web only
+  // Google (web only)
   const _isApp=!!(window.Capacitor||navigator.userAgent.includes('wv'));
-  if(!_isApp&&my>CH*.74&&my<CH*.84){ doGoogleAuth(); return; }
+  if(!_isApp&&my>=CH*.695&&my<=CH*.695+fh){ doGoogleAuth(); return; }
 
-  const fw=CW*.78, fh=CH*.072, fx=CW/2-fw/2;
-  let fy=CH*.34;
-  // Email tap
-  if(my>=fy&&my<=fy+fh){ promptField('email'); return; }
-  fy+=fh+CH*.025;
-  // Password tap
-  if(my>=fy&&my<=fy+fh){ promptField('password'); return; }
+  const fw=CW*.78, fh=CH*.068;
+  // Email
+  if(my>=CH*.28&&my<=CH*.28+fh){ promptField('email'); return; }
+  // Password
+  if(my>=CH*.38&&my<=CH*.38+fh){ promptField('password'); return; }
   // Forgot password
-  if(authMode==='login'&&my>=fy+fh&&my<=fy+fh+CH*.07){ doForgotPassword(); return; }
-  fy+=fh+CH*.10;
+  if(authMode==='login'&&my>=CH*.46&&my<=CH*.52){ doForgotPassword(); return; }
   // Submit
-  if(my>=fy&&my<=fy+fh*1.1){ doAuth(); return; }
+  if(my>=CH*.575&&my<=CH*.575+fh*1.1){ doAuth(); return; }
 }
 
 function promptField(field){
