@@ -98,7 +98,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260528.0222'; // auto-updated each build
+const BUILD = '20260528.1637'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1777,122 +1777,204 @@ function garageLayout(){
 }
 
 function drawGarage(cx){
-  cx.fillStyle='#0e0c0a';cx.fillRect(0,0,CW,CH);
-  cx.fillStyle='rgba(0,0,0,.45)';cx.fillRect(0,0,CW,52);
-  cx.textAlign='left';cx.fillStyle='rgba(255,255,255,.4)';cx.font='12px monospace';cx.fillText('< BACK',12,33);
-  cx.textAlign='center';cx.fillStyle='#ffdd33';cx.font='bold 18px monospace';cx.fillText('GARAGE',CW/2,33);
-  cx.textAlign='right';cx.fillStyle='#ffee44';cx.font='bold 14px monospace';cx.fillText('$'+S.coins,CW-12,33);
+  cx.save();
+  // Dark background
+  cx.fillStyle='#0a0a14'; cx.fillRect(0,0,CW,CH);
 
-  const{cols,cW,cH,pad,startX}=garageLayout();
-  const totalH=Math.ceil(CAR_DEFS.length/cols)*(cH+pad)+pad+60;
-  const maxScroll=Math.max(0,totalH-CH);
-  scroll.garage=Math.min(scroll.garage,maxScroll);
-  const offY=52-scroll.garage;
+  // Header
+  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.055)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('GARAGE',CW/2,CH*.065);
+  cx.fillStyle='#2ecc71'; cx.font=`bold ${Math.round(CH*.038)}px monospace`;
+  cx.textAlign='right';
+  cx.fillText('$'+S.coins,CW-12,CH*.065);
 
-  cx.save();cx.beginPath();cx.rect(0,52,CW,CH-52);cx.clip();
+  // Back button
+  cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.25)'; cx.lineWidth=1.5;
+  cx.beginPath(); cx.roundRect(8,8,Math.round(CW*.1),Math.round(CH*.075),6); cx.fill(); cx.stroke();
+  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.036)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('◀',8+Math.round(CW*.05),8+Math.round(CH*.0375));
 
-  CAR_DEFS.forEach((def,i)=>{
-    const col=i%cols,row=Math.floor(i/cols);
-    const cx2=startX+col*(cW+pad),cy2=offY+row*(cH+pad)+pad;
-    if(cy2+cH<52||cy2>CH)return;
-    const owned=S.unlocked.includes(def.id),sel=S.selected===def.id;
-    const nameSize=Math.max(10,Math.min(14,Math.floor(cW/11)));
-    const small=Math.max(8,Math.min(11,Math.floor(cW/16)));
-    const tiny=Math.max(7,Math.min(9,Math.floor(cW/20)));
+  const cars=CAR_DEFS;
+  const sel=cars.find(d=>d.id===S.selected)||cars[0];
+  const selIdx=cars.indexOf(sel);
 
-    btn(cx,cx2,cy2,cW,cH,
-      sel?'rgba(255,220,50,.14)':owned?'rgba(30,30,40,.95)':'rgba(15,15,20,.95)',
-      sel?'#ffdd33':owned?'rgba(100,120,160,.5)':'rgba(255,255,255,.08)',sel?2:1);
+  // ── BIG CAR PREVIEW ──────────────────────────────────────────────────────
+  const prevX=CW*.5, prevY=CH*.31, prevR=Math.min(CW,CH)*.18;
+  // Glow circle
+  const grd=cx.createRadialGradient(prevX,prevY,0,prevX,prevY,prevR*1.4);
+  grd.addColorStop(0,'rgba(240,165,0,0.18)');
+  grd.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=grd; cx.fillRect(prevX-prevR*2,prevY-prevR*2,prevR*4,prevR*4);
 
-    cx.save();clipCard(cx,cx2,cy2,cW,cH);
-
-    // Preview area with colour gradient
-    const preH=Math.floor(cH*0.38);
-    const grad=cx.createLinearGradient(cx2,cy2,cx2,cy2+preH);
-    grad.addColorStop(0,def.col+'44');grad.addColorStop(1,'rgba(0,0,0,.6)');
-    cx.fillStyle=grad;cx.fillRect(cx2,cy2,cW,preH);
-
-    // Draw car sprite in garage preview
-    cx.save();
-    cx.translate(cx2+cW/2, cy2+preH*0.55);
-    const _sprW=Math.min(cW*.7,preH*.9), _sprH=_sprW*(44/26);
-    if(sel){cx.fillStyle='rgba(255,220,50,.25)';cx.beginPath();cx.arc(0,0,_sprW*.55,0,Math.PI*2);cx.fill();}
-    const _spr=CAR_SPRITES[def.body]||CAR_SPRITES.std;
-    if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
-      cx.imageSmoothingEnabled=false;
-      cx.drawImage(CAR_SHEET,_spr.sx,_spr.sy,_spr.sw,_spr.sh,-_sprW/2,-_sprH/2,_sprW,_sprH);
-    }else{
-      cx.fillStyle=def.col;cx.fillRect(-_sprW/2,-_sprH/2,_sprW,_sprH);
-    }
+  // Draw big car sprite
+  const spr=CAR_SPRITES[sel.body]||CAR_SPRITES.std;
+  const bigW=prevR*2.2, bigH=prevR*3.2;
+  if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
+    cx.save(); cx.translate(prevX,prevY); cx.rotate(Math.PI);
+    cx.imageSmoothingEnabled=false;
+    cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,-bigW/2,-bigH/2,bigW,bigH);
     cx.restore();
+  }
 
-    // Info
-    const infoY=cy2+preH;
-    cx.fillStyle='rgba(0,0,0,.5)';cx.fillRect(cx2,infoY,cW,cH-preH);
-    cx.textAlign='center';
-    cx.fillStyle=owned?'#fff':'rgba(255,255,255,.35)';
-    cx.font=`bold ${nameSize}px monospace`;cx.fillText(def.name,cx2+cW/2,infoY+nameSize+3);
-    // Short desc
-    cx.fillStyle='rgba(255,255,255,.45)';cx.font=`${tiny}px monospace`;
-    const words=def.desc.split(' ');let line='',ly=infoY+nameSize*2+5,lines=0;
-    for(const w of words){const t=line+w+' ';if(cx.measureText(t).width>cW-8&&line&&lines<2){cx.fillText(line.trim(),cx2+cW/2,ly);line=w+' ';ly+=tiny+2;lines++;}else line=t;}
-    if(lines<2)cx.fillText(line.trim(),cx2+cW/2,ly);
+  // Car name + tagline
+  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.048)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText(sel.name.toUpperCase(),CW/2,CH*.515);
+  cx.fillStyle='rgba(255,255,255,.5)'; cx.font=`${Math.round(CH*.028)}px monospace`;
+  cx.fillText(sel.desc||'',CW/2,CH*.555);
 
-    // Stat bars
-    const statsY=infoY+nameSize*2+tiny*2+14;
-    const bx=cx2+6,bW=cW-12,statH=Math.max(4,Math.floor(cW*.04));
-    const statGap=Math.floor(cH*.094);
-    [['SPD',def.top/540,'#4488ff'],['ACC',def.acc/450,'#44ff88'],['GRP',def.grip,'#ffaa44'],['NOS',def.nos/1.3,'#ff44aa']].forEach(([lbl,val,col],si)=>{
-      const sy=statsY+si*statGap;
-      cx.fillStyle='rgba(255,255,255,.1)';cx.fillRect(bx,sy,bW,statH);
-      cx.fillStyle=col;cx.fillRect(bx,sy,bW*Math.min(1,val),statH);
-      cx.fillStyle='rgba(255,255,255,.55)';cx.font=`${tiny}px monospace`;cx.textAlign='left';cx.fillText(lbl,bx,sy-1);
-    });
-
-    const btnY=cy2+cH-Math.max(22,Math.floor(cH*.12)),btnH=Math.max(18,Math.floor(cH*.1));
-    cx.textAlign='center';
-    if(sel){
-      btn(cx,cx2+6,btnY,cW-12,btnH,'rgba(255,220,50,.28)','#ffdd33');
-      cx.fillStyle='#ffdd33';cx.font=`bold ${small}px monospace`;cx.fillText('✓ SELECTED',cx2+cW/2,btnY+btnH*.72);
-    }else if(owned){
-      btn(cx,cx2+6,btnY,cW-12,btnH,'rgba(60,160,220,.22)','rgba(80,180,240,.5)');
-      cx.fillStyle='#88ccff';cx.font=`bold ${small}px monospace`;cx.fillText('SELECT',cx2+cW/2,btnY+btnH*.72);
-    }else{
-      const can=S.coins>=def.price;
-      btn(cx,cx2+6,btnY,cW-12,btnH,can?'rgba(255,200,50,.2)':'rgba(60,60,60,.3)',can?'#ffdd33':'rgba(100,100,100,.4)');
-      cx.fillStyle=can?'#ffdd33':'rgba(120,120,120,.6)';cx.font=`bold ${small}px monospace`;
-      cx.fillText('BUY $'+def.price,cx2+cW/2,btnY+btnH*.72);
-    }
-    cx.restore();
+  // ── STAT BARS ────────────────────────────────────────────────────────────
+  const stats=[
+    {lbl:'SPD',val:sel.top/400,col:'#e74c3c'},
+    {lbl:'ACC',val:sel.acc/18,col:'#f39c12'},
+    {lbl:'GRP',val:sel.grip/0.95,col:'#2ecc71'},
+    {lbl:'NOS',val:sel.nos||0.7,col:'#3498db'},
+  ];
+  const barY=CH*.60, barH=CH*.032, barW=CW*.55, barX=CW/2-barW/2;
+  const lblW=CW*.09;
+  stats.forEach((s,i)=>{
+    const by=barY+i*(barH+CH*.018);
+    cx.fillStyle='rgba(255,255,255,.8)'; cx.font=`bold ${Math.round(barH*.9)}px monospace`;
+    cx.textAlign='left'; cx.textBaseline='middle';
+    cx.fillText(s.lbl,barX,by+barH/2);
+    // Bar bg
+    cx.fillStyle='rgba(255,255,255,.1)';
+    cx.beginPath(); cx.roundRect(barX+lblW,by,barW-lblW,barH,barH/2); cx.fill();
+    // Bar fill
+    const fillW=Math.max(barH,(barW-lblW)*Math.min(1,s.val));
+    cx.fillStyle=s.col;
+    cx.beginPath(); cx.roundRect(barX+lblW,by,fillW,barH,barH/2); cx.fill();
   });
+
+  // ── BUY / SELECT BUTTON ──────────────────────────────────────────────────
+  const btnY=CH*.845, btnW=CW*.55, btnH=CH*.085;
+  const owned=S.unlocked&&S.unlocked.includes(sel.id);
+  const isSelected=S.selected===sel.id;
+  const canAfford=S.coins>=sel.price;
+
+  if(isSelected){
+    cx.fillStyle='#2ecc71';
+  } else if(owned){
+    cx.fillStyle='#f0a500';
+  } else if(canAfford){
+    cx.fillStyle='#e74c3c';
+  } else {
+    cx.fillStyle='#555';
+  }
+  cx.beginPath(); cx.roundRect(CW/2-btnW/2,btnY,btnW,btnH,10); cx.fill();
+  cx.fillStyle=isSelected?'#000':'#fff';
+  cx.font=`bold ${Math.round(btnH*.42)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  const btnTxt=isSelected?'✓ SELECTED':owned?'EQUIP':'BUY $'+sel.price;
+  cx.fillText(btnTxt,CW/2,btnY+btnH/2);
+
+  // ── CAR SCROLL LIST (bottom) ──────────────────────────────────────────────
+  const thumbSize=Math.round(Math.min(CW*.12,CH*.12));
+  const thumbY=CH*.935-thumbSize/2;
+  const totalW=cars.length*(thumbSize+6);
+  const startX=CW/2-totalW/2;
+
+  cx.save();
+  cx.beginPath(); cx.rect(0,thumbY-4,CW,thumbSize+12); cx.clip();
+  cars.forEach((car,i)=>{
+    const tx=startX+i*(thumbSize+6)-((scroll.garage||0)%(totalW));
+    if(tx+thumbSize<0||tx>CW) return;
+    const isSel=car.id===sel.id;
+    const isOwned=S.unlocked&&S.unlocked.includes(car.id);
+    cx.fillStyle=isSel?'rgba(240,165,0,.3)':'rgba(255,255,255,.08)';
+    cx.strokeStyle=isSel?'#f0a500':isOwned?'#2ecc71':'rgba(255,255,255,.2)';
+    cx.lineWidth=isSel?2.5:1.5;
+    cx.beginPath(); cx.roundRect(tx,thumbY,thumbSize,thumbSize,6); cx.fill(); cx.stroke();
+    // Mini car sprite
+    const sp2=CAR_SPRITES[car.body]||CAR_SPRITES.std;
+    if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
+      cx.save(); cx.translate(tx+thumbSize/2,thumbY+thumbSize/2); cx.rotate(Math.PI);
+      cx.imageSmoothingEnabled=false;
+      cx.drawImage(CAR_SHEET,sp2.sx,sp2.sy,sp2.sw,sp2.sh,-thumbSize*.3,-thumbSize*.45,thumbSize*.6,thumbSize*.9);
+      cx.restore();
+    }
+    if(!isOwned&&car.price>0){
+      cx.fillStyle='rgba(0,0,0,.55)';
+      cx.beginPath(); cx.roundRect(tx,thumbY,thumbSize,thumbSize,6); cx.fill();
+      cx.fillStyle='rgba(255,255,255,.7)'; cx.font=`${Math.round(thumbSize*.18)}px monospace`;
+      cx.textAlign='center'; cx.textBaseline='middle';
+      cx.fillText('🔒',tx+thumbSize/2,thumbY+thumbSize/2);
+    }
+  });
+  cx.restore();
+
+  // Nav arrows for scroll
+  if(selIdx>0){
+    cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`bold ${Math.round(CH*.05)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText('◀',Math.round(CW*.06),CH*.935);
+  }
+  if(selIdx<cars.length-1){
+    cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`bold ${Math.round(CH*.05)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText('▶',Math.round(CW*.94),CH*.935);
+  }
 
   cx.restore();
-  if(maxScroll>0){
-    const pct=scroll.garage/maxScroll,trackH=CH-52;
-    const indH=Math.max(30,trackH*(trackH/totalH));
-    cx.fillStyle='rgba(255,255,255,.15)';cx.fillRect(CW-6,52+(trackH-indH)*pct,4,indH);
+}
+
+
+function garageClick(mx,my){
+  if(isDragging()) return;
+  // Back button
+  if(mx<=CW*.12&&my<=CH*.1){ state='menu'; sfxBeep(300,.08); return; }
+
+  const cars=CAR_DEFS;
+  const sel=cars.find(d=>d.id===S.selected)||cars[0];
+  const selIdx=cars.indexOf(sel);
+
+  // Nav arrows
+  if(my>CH*.88){
+    if(mx<CW*.15&&selIdx>0){
+      S.selected=cars[selIdx-1].id; doSave(); sfxBeep(440,.08); return;
+    }
+    if(mx>CW*.85&&selIdx<cars.length-1){
+      S.selected=cars[selIdx+1].id; doSave(); sfxBeep(440,.08); return;
+    }
+    // Thumb tap
+    const thumbSize=Math.round(Math.min(CW*.12,CH*.12));
+    const totalW=cars.length*(thumbSize+6);
+    const startX=CW/2-totalW/2;
+    cars.forEach((car,i)=>{
+      const tx=startX+i*(thumbSize+6);
+      if(mx>=tx&&mx<=tx+thumbSize){
+        if(S.unlocked&&S.unlocked.includes(car.id)){
+          S.selected=car.id; doSave(); sfxBeep(440,.08);
+        } else {
+          S.selected=car.id; sfxBeep(330,.05);
+        }
+      }
+    });
+    return;
+  }
+
+  // Buy/Select button
+  const btnY=CH*.845, btnW=CW*.55, btnH=CH*.085;
+  if(my>=btnY&&my<=btnY+btnH&&mx>=CW/2-btnW/2&&mx<=CW/2+btnW/2){
+    const owned=S.unlocked&&S.unlocked.includes(sel.id);
+    if(owned){
+      S.selected=sel.id; doSave(); sfxBeep(440,.08);
+    } else if(S.coins>=sel.price){
+      S.coins-=sel.price;
+      if(!S.unlocked) S.unlocked=[];
+      S.unlocked.push(sel.id);
+      S.selected=sel.id;
+      doSave();
+      sfxBeep(660,.08); setTimeout(()=>sfxBeep(880,.2),110);
+    } else {
+      sfxBeep(180,.15,.3,'sawtooth');
+    }
+    return;
   }
 }
-function garageClick(mx,my){
-  if(my<52){if(mx<90){state='menu';return;}}
-  if(isDragging())return;
-  const{cols,cW,cH,pad,startX}=garageLayout();
-  CAR_DEFS.forEach((def,i)=>{
-    const col=i%cols,row=Math.floor(i/cols);
-    const cx2=startX+col*(cW+pad),cy2=52-scroll.garage+row*(cH+pad)+pad;
-    if(mx>=cx2&&mx<=cx2+cW&&my>=cy2&&my<=cy2+cH){
-      if(S.unlocked.includes(def.id)){S.selected=def.id;doSave();sfxBeep(440,.08);}
-      else if(S.coins>=def.price){S.coins-=def.price;S.unlocked.push(def.id);S.selected=def.id;doSave();sfxBeep(660,.08);setTimeout(()=>sfxBeep(880,.2),110);}
-      else sfxBeep(180,.15,.3,'sawtooth');
-    }
-  });
-}
 
-
-
-// ─── AUTH SCREEN ─────────────────────────────────────────────────────────────
-let authMode='login'; // 'login' or 'register'
-let authEmail='', authPwd='', authMsg='', authMsgColor='#e74c3c';
 
 function drawAuth(cx){
   cx.save();
