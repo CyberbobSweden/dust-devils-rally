@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2151'; // auto-updated each build
+const BUILD = '20260529.2208'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1637,6 +1637,28 @@ function drawMenu(cx){
   cx.textAlign='right';cx.fillStyle='rgba(255,255,255,.2)';cx.font='9px monospace';
   cx.fillText(VERSION+' · '+BUILD,CW-8,CH-18);
   if(adminTaps>0){cx.fillStyle='rgba(255,100,50,.85)';cx.font='bold 11px monospace';cx.textAlign='center';cx.fillText('\u2699 '+adminTaps+'/7',CW/2,15);}
+  // ── Daily Challenges strip ──────────────────────────────────────────────
+  try {
+    const _ch=getDailyChallenges();
+    const _chY=CH*.895, _chH=CH*.048;
+    cx.fillStyle='rgba(0,0,0,.4)'; cx.fillRect(0,_chY-2,CW,_chH+4);
+    cx.font=`bold ${Math.round(_chH*.46)}px monospace`;
+    cx.textBaseline='middle';
+    cx.fillStyle='#f0a500'; cx.textAlign='left';
+    cx.fillText('DAILY:',8,_chY+_chH/2);
+    const _cw=(CW-70)/3;
+    _ch.forEach((c,i)=>{
+      const tx=70+i*_cw;
+      cx.fillStyle=c.done?'#2ecc71':'rgba(255,255,255,.6)';
+      cx.textAlign='left';
+      cx.font=`${Math.round(_chH*.4)}px monospace`;
+      cx.fillText((c.done?'✓ ':'')+c.desc,tx,_chY+_chH*.3);
+      cx.fillStyle=c.done?'rgba(46,204,113,.5)':'rgba(240,165,0,.7)';
+      cx.font=`bold ${Math.round(_chH*.38)}px monospace`;
+      cx.fillText('+$'+c.reward,tx,_chY+_chH*.72);
+    });
+  } catch(e){}
+
   cx.textAlign='center';cx.fillStyle='rgba(255,180,80,.3)';cx.font='9px monospace';
   cx.fillText('Made with ❤ by Risingbob · Umeå, Sweden',CW/2,CH-6);
 
