@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2147'; // auto-updated each build
+const BUILD = '20260529.2151'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -683,6 +683,56 @@ async function fbLoadProgress(name){
     }
   }catch(e){}
   return false;
+}
+
+// ─── DAILY CHALLENGES ─────────────────────────────────────────────────────────
+const CHALLENGE_DEFS=[
+  {id:'win',    desc:'Win a race',           reward:150, check:e=>e.pos===1},
+  {id:'top2',   desc:'Finish top 2',         reward:80,  check:e=>e.pos<=2},
+  {id:'clean',  desc:'Clean race (no walls)', reward:100, check:(e,car)=>!car.wentOff},
+  {id:'pb',     desc:'Set a personal best',  reward:120, check:(e,car,isPB)=>isPB},
+  {id:'race3',  desc:'Complete 3 races',     reward:90,  check:null}, // special
+  {id:'nos',    desc:'Use NOS 5+ times',     reward:70,  check:null}, // special
+  {id:'fast',   desc:'Lap under 35 seconds', reward:130, check:(e,car,isPB,lapT)=>lapT&&lapT<35},
+];
+
+function getDailySeed(){
+  const d=new Date(); return d.getFullYear()*10000+d.getMonth()*100+d.getDate();
+}
+function getDailyChallenges(){
+  const seed=getDailySeed();
+  if(!S.challengeSeed||S.challengeSeed!==seed){
+    // New day - pick 3 random challenges
+    const rng=(n)=>{ let x=Math.sin(seed*9301+n*49297)*233280; return x-Math.floor(x); };
+    const picks=[];
+    const pool=[...CHALLENGE_DEFS];
+    for(let i=0;i<3;i++){
+      const idx=Math.floor(rng(i)*pool.length);
+      picks.push({...pool[idx], done:false});
+      pool.splice(idx,1);
+    }
+    S.challengeSeed=seed;
+    S.challenges=picks;
+    S.raceCount=S.raceCount||0;
+    S.nosCount=S.nosCount||0;
+    doSave();
+  }
+  return S.challenges||[];
+}
+
+function checkChallenges(entry, car, isPB, lapT){
+  const ch=getDailyChallenges();
+  let earned=0;
+  ch.forEach(c=>{
+    if(c.done) return;
+    let pass=false;
+    if(c.id==='race3'){ S.raceCount=(S.raceCount||0)+1; pass=S.raceCount>=3; }
+    else if(c.id==='nos'){ S.nosCount=(S.nosCount||0)+(car._nosUses||0); pass=S.nosCount>=5; }
+    else if(c.check) pass=c.check(entry,car,isPB,lapT);
+    if(pass){ c.done=true; earned+=c.reward; }
+  });
+  if(earned>0){ S.coins+=earned; S.challenges=ch; doSave(); }
+  return earned;
 }
 
 // ─── PARTICLES ───────────────────────────────────────────────────────────────
@@ -1871,21 +1921,26 @@ function drawGarage(cx){
       const lvl=getUpgrade(sel.id,u.key);
       cx.fillStyle='rgba(255,255,255,.08)'; cx.strokeStyle=u.col; cx.lineWidth=1.5;
       cx.beginPath();cx.roundRect(ux,_uLY,_uLW,_uLH,6);cx.fill();cx.stroke();
-      cx.fillStyle='rgba(255,255,255,.85)'; cx.font=`bold ${Math.round(_uLH*.18)}px monospace`;
+      // Label
+      cx.fillStyle='#fff'; cx.font=`bold ${Math.round(_uLH*.22)}px monospace`;
       cx.textAlign='center'; cx.textBaseline='middle';
-      cx.fillText(u.lbl,ux+_uLW/2,_uLY+_uLH*.24);
+      cx.fillText(u.lbl,ux+_uLW/2,_uLY+_uLH*.25);
+      // Level pips - bigger and clearer
+      const _pw=Math.floor((_uLW-12)/UPGRADE_MAX-3), _ph=Math.round(_uLH*.18);
       for(let p=0;p<UPGRADE_MAX;p++){
-        const pw=(_uLW-10)/UPGRADE_MAX-2, ph=_uLH*.14;
-        cx.fillStyle=p<lvl?u.col:'rgba(255,255,255,.15)';
-        cx.beginPath();cx.roundRect(ux+5+p*(pw+2),_uLY+_uLH*.42,pw,ph,2);cx.fill();
+        const _px=ux+6+p*(_pw+3), _py=_uLY+_uLH*.44;
+        cx.fillStyle=p<lvl?u.col:'rgba(255,255,255,.12)';
+        cx.beginPath();cx.roundRect(_px,_py,_pw,_ph,3);cx.fill();
+        if(p<lvl){ cx.fillStyle='rgba(255,255,255,.3)'; cx.beginPath();cx.roundRect(_px,_py,_pw,_ph*.3,3);cx.fill(); }
       }
+      // Price button
       const cost=lvl>=UPGRADE_MAX?0:UPGRADE_COST[lvl];
       const canAff=lvl<UPGRADE_MAX&&S.coins>=cost;
-      cx.fillStyle=lvl>=UPGRADE_MAX?'rgba(255,255,255,.2)':canAff?u.col:'rgba(80,80,80,.5)';
-      cx.beginPath();cx.roundRect(ux+4,_uLY+_uLH*.62,_uLW-8,_uLH*.3,4);cx.fill();
-      cx.fillStyle=lvl>=UPGRADE_MAX?'rgba(255,255,255,.4)':canAff?'#000':'rgba(255,255,255,.3)';
-      cx.font=`bold ${Math.round(_uLH*.18)}px monospace`;
-      cx.fillText(lvl>=UPGRADE_MAX?'MAX':'$'+cost,ux+_uLW/2,_uLY+_uLH*.79);
+      cx.fillStyle=lvl>=UPGRADE_MAX?'rgba(255,255,255,.15)':canAff?u.col:'rgba(60,60,60,.6)';
+      cx.beginPath();cx.roundRect(ux+5,_uLY+_uLH*.67,_uLW-10,_uLH*.27,5);cx.fill();
+      cx.fillStyle=lvl>=UPGRADE_MAX?'rgba(255,255,255,.5)':canAff?'#000':'rgba(200,200,200,.5)';
+      cx.font=`bold ${Math.round(_uLH*.22)}px monospace`;
+      cx.fillText(lvl>=UPGRADE_MAX?'MAX':'$'+cost,ux+_uLW/2,_uLY+_uLH*.81);
     });
 
     // Button - positioned to not overlap thumbnails
@@ -2865,6 +2920,14 @@ function finishRace(){ spawnConfetti();
   const entry={name:S.name||'ANON',time:raceT,pos,car:S.selected,track:tid};
   S.scores.push(entry); S.scores.sort((a,b)=>a.time-b.time); S.scores=S.scores.slice(0,10);
   doSave(); fbSave(entry);
+  // Check daily challenges
+  const _isPB=!S.bestTimes[tid]||raceT<(S.bestTimes[tid]||99999);
+  const _lapT=cars[0].lapGhost?cars[0].lapGhost.lapTime:null;
+  const _chalEarned=checkChallenges(entry,cars[0],_isPB,_lapT);
+  if(_chalEarned>0){
+    resReasons.push('🎯 Daily bonus: +$'+_chalEarned+'!');
+    S.coins+=0; // already added in checkChallenges, just trigger display
+  }
   // Upload ghost if personal best on this track
   const _tid=S.currentTrack||0;
   // Save best completed lap ghost
