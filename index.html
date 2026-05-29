@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2040'; // auto-updated each build
+const BUILD = '20260529.2123'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1487,10 +1487,16 @@ function drawMenu(cx){
     cx.lineTo(CW/2+Math.cos(ang)*r2,CH*.45+Math.sin(ang)*r2);cx.stroke();
   }
 
-  // ── DUST DEVILS title ─────────────────────────────────────────────────────
+  // ── DUST DEVILS title (pulsing) ─────────────────────────────────────────────
   cx.textAlign='center';
   const titleY=csz*2+CH*.14;
   const titleSize=Math.min(42,Math.max(26,CH*.072));
+  const _tPulse=Date.now()*.001;
+  const _pulse=1+Math.sin(_tPulse*1.8)*.025;
+  cx.save();
+  cx.translate(CW/2,titleY);
+  cx.scale(_pulse,_pulse);
+  cx.translate(-CW/2,-titleY);
   cx.font=`bold italic ${titleSize}px Impact, "Arial Black", monospace`;
 
   // Outer glow
@@ -1524,6 +1530,7 @@ function drawMenu(cx){
   cx.font=`bold italic ${Math.round(rallyH*.58)}px Impact, "Arial Black", monospace`;
   cx.fillText('RALLY',CW/2,rallyY+rallyH*.72);
   cx.shadowBlur=0;
+  cx.restore(); // end pulse transform
 
   // ── Player info ───────────────────────────────────────────────────────────
   const infoY=rallyY+rallyH+CH*.04;
@@ -2516,15 +2523,17 @@ function drawResults(cx,cam,SC){
   grd.addColorStop(1,'rgba(0,0,0,0)');
 
   // Big position number
-  cx.fillStyle=posColor;
-  cx.font=`bold ${Math.round(CH*.22)}px monospace`;
-  cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText(posLabel,CW/2,CH*.25);
-
+  // Trophy first (top)
   if(trophy){
-    cx.font=`${Math.round(CH*.08)}px monospace`;
-    cx.fillText(trophy,CW/2,CH*.13);
+    cx.font=`${Math.round(CH*.09)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText(trophy,CW/2,CH*.1);
   }
+  // Position text below trophy with gap
+  cx.fillStyle=posColor;
+  cx.font=`bold ${Math.round(CH*.2)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText(posLabel,CW/2,CH*.27);
 
   // Decorative line
   const lineW=CW*.4;
