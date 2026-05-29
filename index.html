@@ -98,7 +98,7 @@ canvas { display: block; }
   </script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260528.1637'; // auto-updated each build
+const BUILD = '20260529.0205'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1778,143 +1778,177 @@ function garageLayout(){
 
 function drawGarage(cx){
   cx.save();
-  // Dark background
   cx.fillStyle='#0a0a14'; cx.fillRect(0,0,CW,CH);
-
-  // Header
-  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.055)}px monospace`;
-  cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText('GARAGE',CW/2,CH*.065);
-  cx.fillStyle='#2ecc71'; cx.font=`bold ${Math.round(CH*.038)}px monospace`;
-  cx.textAlign='right';
-  cx.fillText('$'+S.coins,CW-12,CH*.065);
-
-  // Back button
-  cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.25)'; cx.lineWidth=1.5;
-  cx.beginPath(); cx.roundRect(8,8,Math.round(CW*.1),Math.round(CH*.075),6); cx.fill(); cx.stroke();
-  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.036)}px monospace`;
-  cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText('◀',8+Math.round(CW*.05),8+Math.round(CH*.0375));
 
   const cars=CAR_DEFS;
   const sel=cars.find(d=>d.id===S.selected)||cars[0];
   const selIdx=cars.indexOf(sel);
-
-  // ── BIG CAR PREVIEW ──────────────────────────────────────────────────────
-  const prevX=CW*.5, prevY=CH*.31, prevR=Math.min(CW,CH)*.18;
-  // Glow circle
-  const grd=cx.createRadialGradient(prevX,prevY,0,prevX,prevY,prevR*1.4);
-  grd.addColorStop(0,'rgba(240,165,0,0.18)');
-  grd.addColorStop(1,'rgba(0,0,0,0)');
-  cx.fillStyle=grd; cx.fillRect(prevX-prevR*2,prevY-prevR*2,prevR*4,prevR*4);
-
-  // Draw big car sprite
-  const spr=CAR_SPRITES[sel.body]||CAR_SPRITES.std;
-  const bigW=prevR*2.2, bigH=prevR*3.2;
-  if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
-    cx.save(); cx.translate(prevX,prevY); cx.rotate(Math.PI);
-    cx.imageSmoothingEnabled=false;
-    cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,-bigW/2,-bigH/2,bigW,bigH);
-    cx.restore();
-  }
-
-  // Car name + tagline
-  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.048)}px monospace`;
-  cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText(sel.name.toUpperCase(),CW/2,CH*.515);
-  cx.fillStyle='rgba(255,255,255,.5)'; cx.font=`${Math.round(CH*.028)}px monospace`;
-  cx.fillText(sel.desc||'',CW/2,CH*.555);
-
-  // ── STAT BARS ────────────────────────────────────────────────────────────
-  const stats=[
-    {lbl:'SPD',val:sel.top/400,col:'#e74c3c'},
-    {lbl:'ACC',val:sel.acc/18,col:'#f39c12'},
-    {lbl:'GRP',val:sel.grip/0.95,col:'#2ecc71'},
-    {lbl:'NOS',val:sel.nos||0.7,col:'#3498db'},
-  ];
-  const barY=CH*.60, barH=CH*.032, barW=CW*.55, barX=CW/2-barW/2;
-  const lblW=CW*.09;
-  stats.forEach((s,i)=>{
-    const by=barY+i*(barH+CH*.018);
-    cx.fillStyle='rgba(255,255,255,.8)'; cx.font=`bold ${Math.round(barH*.9)}px monospace`;
-    cx.textAlign='left'; cx.textBaseline='middle';
-    cx.fillText(s.lbl,barX,by+barH/2);
-    // Bar bg
-    cx.fillStyle='rgba(255,255,255,.1)';
-    cx.beginPath(); cx.roundRect(barX+lblW,by,barW-lblW,barH,barH/2); cx.fill();
-    // Bar fill
-    const fillW=Math.max(barH,(barW-lblW)*Math.min(1,s.val));
-    cx.fillStyle=s.col;
-    cx.beginPath(); cx.roundRect(barX+lblW,by,fillW,barH,barH/2); cx.fill();
-  });
-
-  // ── BUY / SELECT BUTTON ──────────────────────────────────────────────────
-  const btnY=CH*.845, btnW=CW*.55, btnH=CH*.085;
   const owned=S.unlocked&&S.unlocked.includes(sel.id);
   const isSelected=S.selected===sel.id;
-  const canAfford=S.coins>=sel.price;
+  const canAfford=S.coins>=(sel.price||0);
+  const land=CW>CH; // landscape detection
 
-  if(isSelected){
-    cx.fillStyle='#2ecc71';
-  } else if(owned){
-    cx.fillStyle='#f0a500';
-  } else if(canAfford){
-    cx.fillStyle='#e74c3c';
-  } else {
-    cx.fillStyle='#555';
-  }
-  cx.beginPath(); cx.roundRect(CW/2-btnW/2,btnY,btnW,btnH,10); cx.fill();
-  cx.fillStyle=isSelected?'#000':'#fff';
-  cx.font=`bold ${Math.round(btnH*.42)}px monospace`;
+  // ── HEADER ───────────────────────────────────────────────────────────────
+  const hh=Math.round(CH*(land?.08:.09));
+  cx.fillStyle='rgba(0,0,0,.5)'; cx.fillRect(0,0,CW,hh);
+  cx.fillStyle='#f0a500';
+  cx.font=`bold ${Math.round(hh*.52)}px monospace`;
   cx.textAlign='center'; cx.textBaseline='middle';
-  const btnTxt=isSelected?'✓ SELECTED':owned?'EQUIP':'BUY $'+sel.price;
-  cx.fillText(btnTxt,CW/2,btnY+btnH/2);
+  cx.fillText('GARAGE',CW/2,hh/2);
+  cx.fillStyle='#2ecc71'; cx.textAlign='right';
+  cx.fillText('$'+S.coins,CW-14,hh/2);
+  // Back
+  cx.fillStyle='rgba(255,255,255,.15)';
+  cx.strokeStyle='rgba(255,255,255,.3)'; cx.lineWidth=1.5;
+  cx.beginPath(); cx.roundRect(6,5,hh*.9,hh*.78,5); cx.fill(); cx.stroke();
+  cx.fillStyle='#fff'; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.font=`bold ${Math.round(hh*.44)}px monospace`;
+  cx.fillText('◀',6+hh*.45,hh*.44);
 
-  // ── CAR SCROLL LIST (bottom) ──────────────────────────────────────────────
-  const thumbSize=Math.round(Math.min(CW*.12,CH*.12));
-  const thumbY=CH*.935-thumbSize/2;
-  const totalW=cars.length*(thumbSize+6);
-  const startX=CW/2-totalW/2;
-
-  cx.save();
-  cx.beginPath(); cx.rect(0,thumbY-4,CW,thumbSize+12); cx.clip();
-  cars.forEach((car,i)=>{
-    const tx=startX+i*(thumbSize+6)-((scroll.garage||0)%(totalW));
-    if(tx+thumbSize<0||tx>CW) return;
-    const isSel=car.id===sel.id;
-    const isOwned=S.unlocked&&S.unlocked.includes(car.id);
-    cx.fillStyle=isSel?'rgba(240,165,0,.3)':'rgba(255,255,255,.08)';
-    cx.strokeStyle=isSel?'#f0a500':isOwned?'#2ecc71':'rgba(255,255,255,.2)';
-    cx.lineWidth=isSel?2.5:1.5;
-    cx.beginPath(); cx.roundRect(tx,thumbY,thumbSize,thumbSize,6); cx.fill(); cx.stroke();
-    // Mini car sprite
-    const sp2=CAR_SPRITES[car.body]||CAR_SPRITES.std;
+  if(land){
+    // ── LANDSCAPE LAYOUT (desktop/tablet) ─────────────────────────────────
+    const leftW=CW*.42, rightX=CW*.45;
+    // Big car preview on left
+    const prevX=leftW/2, prevY=CH*.5;
+    const prevH=CH*.6;
+    const grd=cx.createRadialGradient(prevX,prevY,0,prevX,prevY,prevH*.7);
+    grd.addColorStop(0,'rgba(240,165,0,0.15)'); grd.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=grd; cx.fillRect(prevX-prevH,prevY-prevH,prevH*2,prevH*2);
+    const spr=CAR_SPRITES[sel.body]||CAR_SPRITES.std;
+    const bW=prevH*.65,bH=prevH;
     if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
-      cx.save(); cx.translate(tx+thumbSize/2,thumbY+thumbSize/2); cx.rotate(Math.PI);
+      cx.save(); cx.translate(prevX,prevY); cx.rotate(Math.PI);
       cx.imageSmoothingEnabled=false;
-      cx.drawImage(CAR_SHEET,sp2.sx,sp2.sy,sp2.sw,sp2.sh,-thumbSize*.3,-thumbSize*.45,thumbSize*.6,thumbSize*.9);
+      cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,-bW/2,-bH/2,bW,bH);
       cx.restore();
     }
-    if(!isOwned&&car.price>0){
-      cx.fillStyle='rgba(0,0,0,.55)';
-      cx.beginPath(); cx.roundRect(tx,thumbY,thumbSize,thumbSize,6); cx.fill();
-      cx.fillStyle='rgba(255,255,255,.7)'; cx.font=`${Math.round(thumbSize*.18)}px monospace`;
-      cx.textAlign='center'; cx.textBaseline='middle';
-      cx.fillText('🔒',tx+thumbSize/2,thumbY+thumbSize/2);
-    }
-  });
-  cx.restore();
+    // Nav arrows
+    if(selIdx>0){ cx.fillStyle='rgba(255,255,255,.7)'; cx.font=`bold ${Math.round(CH*.07)}px monospace`; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('◀',Math.round(CW*.04),prevY); }
+    if(selIdx<cars.length-1){ cx.fillStyle='rgba(255,255,255,.7)'; cx.font=`bold ${Math.round(CH*.07)}px monospace`; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('▶',Math.round(leftW-.04*CW),prevY); }
 
-  // Nav arrows for scroll
-  if(selIdx>0){
-    cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`bold ${Math.round(CH*.05)}px monospace`;
+    // Right side: name, stats, button
+    const rCX=rightX+(CW-rightX)/2;
+    cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.058)}px monospace`;
     cx.textAlign='center'; cx.textBaseline='middle';
-    cx.fillText('◀',Math.round(CW*.06),CH*.935);
-  }
-  if(selIdx<cars.length-1){
-    cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`bold ${Math.round(CH*.05)}px monospace`;
+    cx.fillText(sel.name.toUpperCase(),rCX,CH*.22);
+    cx.fillStyle='rgba(255,255,255,.45)'; cx.font=`${Math.round(CH*.03)}px monospace`;
+    cx.fillText(sel.desc||'',rCX,CH*.31);
+
+    // Stats
+    const stats=[{lbl:'SPD',val:Math.min(1,sel.top/400),col:'#e74c3c'},{lbl:'ACC',val:Math.min(1,sel.acc/18),col:'#f39c12'},{lbl:'GRP',val:Math.min(1,(sel.grip||.7)/.95),col:'#2ecc71'},{lbl:'NOS',val:Math.min(1,sel.nos||.7),col:'#3498db'}];
+    const bW2=CW-rightX-16, barH=CH*.038, barY=CH*.38, lblW=bW2*.14;
+    stats.forEach((s,i)=>{
+      const by=barY+i*(barH+CH*.022);
+      cx.fillStyle='rgba(255,255,255,.85)'; cx.font=`bold ${Math.round(barH*.85)}px monospace`;
+      cx.textAlign='left'; cx.textBaseline='middle';
+      cx.fillText(s.lbl,rightX+8,by+barH/2);
+      cx.fillStyle='rgba(255,255,255,.12)';
+      cx.beginPath(); cx.roundRect(rightX+8+lblW,by,bW2-lblW-8,barH,barH/2); cx.fill();
+      const fw=Math.max(barH,(bW2-lblW-8)*s.val);
+      cx.fillStyle=s.col;
+      cx.beginPath(); cx.roundRect(rightX+8+lblW,by,fw,barH,barH/2); cx.fill();
+    });
+
+    // Button
+    const btnH=CH*.1, btnW=(CW-rightX)*.7, btnY=CH*.78;
+    cx.fillStyle=isSelected?'#2ecc71':owned?'#f0a500':canAfford?'#e74c3c':'#444';
+    cx.beginPath(); cx.roundRect(rCX-btnW/2,btnY,btnW,btnH,10); cx.fill();
+    cx.fillStyle=isSelected?'#000':'#fff';
+    cx.font=`bold ${Math.round(btnH*.42)}px monospace`;
     cx.textAlign='center'; cx.textBaseline='middle';
-    cx.fillText('▶',Math.round(CW*.94),CH*.935);
+    cx.fillText(isSelected?'✓ SELECTED':owned?'▶ EQUIP':'BUY $'+sel.price,rCX,btnY+btnH/2);
+
+    // Thumbnail row bottom
+    const th=Math.round(CH*.13);
+    const gap=4; const totalW2=cars.length*(th+gap)-gap;
+    const rowX=CW/2-totalW2/2; const rowY=CH*.9;
+    cx.save(); cx.beginPath(); cx.rect(0,rowY-2,CW,th+4); cx.clip();
+    cars.forEach((car,i)=>{
+      const tx=rowX+i*(th+gap);
+      const isSel2=car.id===sel.id; const isOwn=S.unlocked&&S.unlocked.includes(car.id);
+      cx.fillStyle=isSel2?'rgba(240,165,0,.25)':'rgba(255,255,255,.07)';
+      cx.strokeStyle=isSel2?'#f0a500':isOwn?'rgba(46,204,113,.5)':'rgba(255,255,255,.2)';
+      cx.lineWidth=isSel2?2.5:1.5;
+      cx.beginPath(); cx.roundRect(tx,rowY,th,th,5); cx.fill(); cx.stroke();
+      const sp2=CAR_SPRITES[car.body]||CAR_SPRITES.std;
+      if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
+        cx.save(); cx.translate(tx+th/2,rowY+th/2); cx.rotate(Math.PI); cx.imageSmoothingEnabled=false;
+        cx.drawImage(CAR_SHEET,sp2.sx,sp2.sy,sp2.sw,sp2.sh,-th*.3,-th*.44,th*.6,th*.88);
+        cx.restore();
+      }
+      if(!isOwn&&(car.price||0)>0){
+        cx.fillStyle='rgba(0,0,0,.55)'; cx.beginPath(); cx.roundRect(tx,rowY,th,th,5); cx.fill();
+        cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`${Math.round(th*.28)}px monospace`;
+        cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('🔒',tx+th/2,rowY+th/2);
+      }
+    });
+    cx.restore();
+
+  } else {
+    // ── PORTRAIT LAYOUT (phone) ────────────────────────────────────────────
+    const prevX=CW/2, prevY=CH*.3, prevH=CH*.34;
+    const grd=cx.createRadialGradient(prevX,prevY,0,prevX,prevY,prevH*.7);
+    grd.addColorStop(0,'rgba(240,165,0,0.15)'); grd.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=grd; cx.fillRect(prevX-prevH,prevY-prevH,prevH*2,prevH*2);
+    const spr=CAR_SPRITES[sel.body]||CAR_SPRITES.std;
+    const bW=prevH*.65,bH=prevH;
+    if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
+      cx.save(); cx.translate(prevX,prevY); cx.rotate(Math.PI); cx.imageSmoothingEnabled=false;
+      cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,-bW/2,-bH/2,bW,bH);
+      cx.restore();
+    }
+    if(selIdx>0){ cx.fillStyle='rgba(255,255,255,.7)'; cx.font=`bold ${Math.round(CH*.065)}px monospace`; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('◀',Math.round(CW*.07),prevY); }
+    if(selIdx<cars.length-1){ cx.fillStyle='rgba(255,255,255,.7)'; cx.font=`bold ${Math.round(CH*.065)}px monospace`; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('▶',Math.round(CW*.93),prevY); }
+
+    cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.044)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText(sel.name.toUpperCase(),CW/2,CH*.555);
+    cx.fillStyle='rgba(255,255,255,.45)'; cx.font=`${Math.round(CH*.025)}px monospace`;
+    cx.fillText(sel.desc||'',CW/2,CH*.59);
+
+    const stats=[{lbl:'SPD',val:Math.min(1,sel.top/400),col:'#e74c3c'},{lbl:'ACC',val:Math.min(1,sel.acc/18),col:'#f39c12'},{lbl:'GRP',val:Math.min(1,(sel.grip||.7)/.95),col:'#2ecc71'},{lbl:'NOS',val:Math.min(1,sel.nos||.7),col:'#3498db'}];
+    const barW=CW*.62, barH=CH*.026, barY=CH*.622, barX=CW/2-barW/2, lblW=CW*.095;
+    stats.forEach((s,i)=>{
+      const by=barY+i*(barH+CH*.015);
+      cx.fillStyle='rgba(255,255,255,.85)'; cx.font=`bold ${Math.round(barH*.9)}px monospace`;
+      cx.textAlign='left'; cx.textBaseline='middle'; cx.fillText(s.lbl,barX,by+barH/2);
+      cx.fillStyle='rgba(255,255,255,.12)'; cx.beginPath(); cx.roundRect(barX+lblW,by,barW-lblW,barH,barH/2); cx.fill();
+      const fw=Math.max(barH,(barW-lblW)*s.val);
+      cx.fillStyle=s.col; cx.beginPath(); cx.roundRect(barX+lblW,by,fw,barH,barH/2); cx.fill();
+    });
+
+    const btnH=CH*.072, btnW=CW*.62, btnY=CH*.79;
+    cx.fillStyle=isSelected?'#2ecc71':owned?'#f0a500':canAfford?'#e74c3c':'#444';
+    cx.beginPath(); cx.roundRect(CW/2-btnW/2,btnY,btnW,btnH,10); cx.fill();
+    cx.fillStyle=isSelected?'#000':'#fff';
+    cx.font=`bold ${Math.round(btnH*.42)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText(isSelected?'✓ SELECTED':owned?'▶ EQUIP':'BUY $'+sel.price,CW/2,btnY+btnH/2);
+
+    const th=Math.round(Math.min(CH*.095,CW*.085));
+    const gap2=3; const totalW2=cars.length*(th+gap2)-gap2;
+    const rowX=CW/2-totalW2/2; const rowY=CH*.897;
+    cx.save(); cx.beginPath(); cx.rect(0,rowY-2,CW,th+4); cx.clip();
+    cars.forEach((car,i)=>{
+      const tx=rowX+i*(th+gap2);
+      const isSel2=car.id===sel.id; const isOwn=S.unlocked&&S.unlocked.includes(car.id);
+      cx.fillStyle=isSel2?'rgba(240,165,0,.25)':'rgba(255,255,255,.07)';
+      cx.strokeStyle=isSel2?'#f0a500':isOwn?'rgba(46,204,113,.5)':'rgba(255,255,255,.2)';
+      cx.lineWidth=isSel2?2.5:1.5;
+      cx.beginPath(); cx.roundRect(tx,rowY,th,th,5); cx.fill(); cx.stroke();
+      const sp2=CAR_SPRITES[car.body]||CAR_SPRITES.std;
+      if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
+        cx.save(); cx.translate(tx+th/2,rowY+th/2); cx.rotate(Math.PI); cx.imageSmoothingEnabled=false;
+        cx.drawImage(CAR_SHEET,sp2.sx,sp2.sy,sp2.sw,sp2.sh,-th*.3,-th*.44,th*.6,th*.88);
+        cx.restore();
+      }
+      if(!isOwn&&(car.price||0)>0){
+        cx.fillStyle='rgba(0,0,0,.55)'; cx.beginPath(); cx.roundRect(tx,rowY,th,th,5); cx.fill();
+        cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`${Math.round(th*.28)}px monospace`;
+        cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('🔒',tx+th/2,rowY+th/2);
+      }
+    });
+    cx.restore();
   }
 
   cx.restore();
@@ -1923,55 +1957,50 @@ function drawGarage(cx){
 
 function garageClick(mx,my){
   if(isDragging()) return;
-  // Back button
-  if(mx<=CW*.12&&my<=CH*.1){ state='menu'; sfxBeep(300,.08); return; }
-
   const cars=CAR_DEFS;
   const sel=cars.find(d=>d.id===S.selected)||cars[0];
   const selIdx=cars.indexOf(sel);
+  const land=CW>CH;
+  const hh=Math.round(CH*(land?.08:.09));
+
+  // Back
+  if(mx<=hh&&my<=hh){ state='menu'; sfxBeep(300,.08); return; }
 
   // Nav arrows
-  if(my>CH*.88){
-    if(mx<CW*.15&&selIdx>0){
-      S.selected=cars[selIdx-1].id; doSave(); sfxBeep(440,.08); return;
-    }
-    if(mx>CW*.85&&selIdx<cars.length-1){
-      S.selected=cars[selIdx+1].id; doSave(); sfxBeep(440,.08); return;
-    }
-    // Thumb tap
-    const thumbSize=Math.round(Math.min(CW*.12,CH*.12));
-    const totalW=cars.length*(thumbSize+6);
-    const startX=CW/2-totalW/2;
-    cars.forEach((car,i)=>{
-      const tx=startX+i*(thumbSize+6);
-      if(mx>=tx&&mx<=tx+thumbSize){
-        if(S.unlocked&&S.unlocked.includes(car.id)){
-          S.selected=car.id; doSave(); sfxBeep(440,.08);
-        } else {
-          S.selected=car.id; sfxBeep(330,.05);
-        }
-      }
-    });
-    return;
+  const prevY=land?CH*.5:CH*.3;
+  if(my>prevY-CH*.2&&my<prevY+CH*.2){
+    if(mx<CW*.14&&selIdx>0){ S.selected=cars[selIdx-1].id; doSave(); sfxBeep(440,.08); return; }
+    if(mx>CW*.86&&selIdx<cars.length-1){ S.selected=cars[selIdx+1].id; doSave(); sfxBeep(440,.08); return; }
   }
 
   // Buy/Select button
-  const btnY=CH*.845, btnW=CW*.55, btnH=CH*.085;
-  if(my>=btnY&&my<=btnY+btnH&&mx>=CW/2-btnW/2&&mx<=CW/2+btnW/2){
+  const btnH=CH*(land?.1:.072);
+  const btnW=land?(CW-CW*.45)*.7:CW*.62;
+  const btnY=CH*(land?.78:.79);
+  const btnX=land?CW*.45+(CW-CW*.45)/2:CW/2;
+  if(my>=btnY&&my<=btnY+btnH&&mx>=btnX-btnW/2&&mx<=btnX+btnW/2){
     const owned=S.unlocked&&S.unlocked.includes(sel.id);
-    if(owned){
-      S.selected=sel.id; doSave(); sfxBeep(440,.08);
-    } else if(S.coins>=sel.price){
+    if(owned){ S.selected=sel.id; doSave(); sfxBeep(440,.08); }
+    else if(S.coins>=(sel.price||0)){
       S.coins-=sel.price;
       if(!S.unlocked) S.unlocked=[];
-      S.unlocked.push(sel.id);
-      S.selected=sel.id;
-      doSave();
-      sfxBeep(660,.08); setTimeout(()=>sfxBeep(880,.2),110);
-    } else {
-      sfxBeep(180,.15,.3,'sawtooth');
-    }
+      S.unlocked.push(sel.id); S.selected=sel.id;
+      doSave(); sfxBeep(660,.08); setTimeout(()=>sfxBeep(880,.2),110);
+    } else { sfxBeep(180,.15,.3,'sawtooth'); }
     return;
+  }
+
+  // Thumbnails
+  const th=land?Math.round(CH*.13):Math.round(Math.min(CH*.095,CW*.085));
+  const gap=land?4:3;
+  const rowY=land?CH*.9:CH*.897;
+  if(my>=rowY-4&&my<=rowY+th+4){
+    const totalW=cars.length*(th+gap)-gap;
+    const rowX=CW/2-totalW/2;
+    cars.forEach((car,i)=>{
+      const tx=rowX+i*(th+gap);
+      if(mx>=tx&&mx<=tx+th){ S.selected=car.id; doSave(); sfxBeep(440,.08); }
+    });
   }
 }
 
@@ -2810,10 +2839,13 @@ function loop(now){
 
 // ─── FIREBASE AUTH OBSERVER ───────────────────────────────────────────────────
 if(typeof firebase !== 'undefined'){
-  firebase.auth().onAuthStateChanged(user=>{
+  firebase.auth().onAuthStateChanged(async user=>{
     if(user){
-      if(state==='auth'){ state='menu'; }
       S.name = user.displayName || user.email.split('@')[0].substring(0,10).toUpperCase();
+      // Load cloud save to restore coins, cars, progress
+      const restored = await fbLoadProgress(S.name);
+      if(restored) showCloudRestoreMsg();
+      if(state==='auth'){ state='menu'; bgmMenu(); }
     }
   });
 }
