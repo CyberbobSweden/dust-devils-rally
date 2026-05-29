@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2208'; // auto-updated each build
+const BUILD = '20260529.2212'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -840,6 +840,65 @@ function updateDrawConfetti(cx,dt){
     cx.fillRect(-c.w/2,-c.h/2,c.w,c.h);
     cx.restore();
   });
+}
+
+// ─── WEATHER SYSTEM ──────────────────────────────────────────────────────────
+// Track weather: 0=clear, 1=rain, 2=dusty, 3=overcast
+const TRACK_WEATHER=[0,1,0,2,1,0,2,0,1,0]; // per track index
+
+let weatherParticles=[];
+let weatherT=0;
+
+function initWeather(trackIdx){
+  weatherParticles=[];
+  weatherT=0;
+}
+
+function updateDrawWeather(cx,dt,trackIdx){
+  const w=TRACK_WEATHER[trackIdx]||0;
+  if(w===0) return;
+  weatherT+=dt;
+
+  if(w===1){ // RAIN
+    // Spawn rain drops
+    while(weatherParticles.length<120){
+      weatherParticles.push({
+        x:Math.random()*CW, y:Math.random()*CH,
+        vx:-0.5, vy:Math.random()*300+200,
+        len:Math.random()*8+6, life:1
+      });
+    }
+    cx.save(); cx.globalAlpha=0.35; cx.strokeStyle='#aaddff'; cx.lineWidth=1;
+    weatherParticles.forEach(r=>{
+      r.x+=r.vx*dt; r.y+=r.vy*dt;
+      if(r.y>CH){ r.y=-10; r.x=Math.random()*CW; }
+      cx.beginPath(); cx.moveTo(r.x,r.y); cx.lineTo(r.x+r.vx*0.08,r.y-r.len); cx.stroke();
+    });
+    cx.restore();
+    // Rain overlay tint
+    cx.fillStyle='rgba(100,130,180,0.06)'; cx.fillRect(0,0,CW,CH);
+
+  } else if(w===2){ // DUST/SAND
+    while(weatherParticles.length<60){
+      weatherParticles.push({
+        x:Math.random()*CW, y:Math.random()*CH,
+        vx:Math.random()*80+40, vy:(Math.random()-0.5)*20,
+        r:Math.random()*3+1, alpha:Math.random()*0.3+0.1
+      });
+    }
+    weatherParticles.forEach(d=>{
+      d.x+=d.vx*dt; d.y+=d.vy*dt;
+      if(d.x>CW+10){ d.x=-10; d.y=Math.random()*CH; }
+      cx.beginPath();
+      cx.arc(d.x,d.y,d.r,0,Math.PI*2);
+      cx.fillStyle=`rgba(210,170,100,${d.alpha})`;
+      cx.fill();
+    });
+    cx.fillStyle='rgba(180,140,80,0.04)'; cx.fillRect(0,0,CW,CH);
+
+  } else if(w===3){ // OVERCAST
+    cx.fillStyle='rgba(60,60,80,0.08)'; cx.fillRect(0,0,CW,CH);
+  }
 }
 
 // ─── SEGMENT CROSSING ──────────────────────────────────────────────────────────
@@ -1663,7 +1722,7 @@ function drawMenu(cx){
   cx.fillText('Made with ❤ by Risingbob · Umeå, Sweden',CW/2,CH-6);
 
   // ── Spotify button bottom-left ───────────────────────────────────────────
-  const _spX=42, _spY=CH-28, _spR=18;
+  const _spX=42, _spY=CH*.87-18, _spR=18;
   cx.save(); cx.globalAlpha=0.75;
   btn(cx,_spX-_spR,_spY-_spR,_spR*2,_spR*2,'#1DB954','#1DB954',0);
   cx.fillStyle='#000'; cx.font=`bold ${Math.round(_spR*1.1)}px monospace`;
@@ -2899,7 +2958,7 @@ function raceClick(mx,my){
     state='menu'; bgmMenu();
   }
 }
-function startRace(){ bgmRace();
+function startRace(){ bgmRace(); initWeather(S.currentTrack||0);
   const g=setupRace();
   cars=[g.pl,...g.ai];
   cam=g.cam;
