@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.0233'; // auto-updated each build
+const BUILD = '20260529.1703'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2492,20 +2492,86 @@ function leaderboardClick(mx,my){
 let resCoins=0,resReasons=[];
 
 function drawResults(cx,cam,SC){
-  drawTrack(cx,cam,SC);drawVignette(cx);
-  cx.fillStyle='rgba(0,0,0,.78)';cx.fillRect(0,0,CW,CH);cx.textAlign='center';
-  cx.fillStyle='#ffee22';cx.font='bold 26px monospace';cx.fillText('RACE FINISHED!',CW/2,CH*.17);
-  cx.fillStyle='#fff';cx.font='20px monospace';cx.fillText(resReasons[0]||'',CW/2,CH*.29);
-  cx.fillStyle='#88ffaa';cx.font='16px monospace';cx.fillText(resReasons[1]||'',CW/2,CH*.38);
-  cx.fillStyle='#ffdd22';cx.font='bold 20px monospace';cx.fillText('+ $'+resCoins+' coins',CW/2,CH*.49);
-  cx.fillStyle='rgba(255,255,255,.45)';cx.font='11px monospace';
-  resReasons.slice(2).forEach((r,i)=>cx.fillText(r,CW/2,CH*.57+i*17));
-  [['RACE AGAIN',CW/2-110],['MAIN MENU',CW/2+10]].forEach(([lbl,bx])=>{
-    btn(cx,bx,CH*.8-18,105,34,'rgba(255,255,255,.1)','rgba(255,255,255,.28)');
-    cx.fillStyle='rgba(255,255,255,.8)';cx.font='bold 11px monospace';cx.textAlign='center';cx.fillText(lbl,bx+52,CH*.8+2);
-  });
+  drawTrack(cx,cam,SC); drawVignette(cx);
+  cx.fillStyle='rgba(0,0,0,.82)'; cx.fillRect(0,0,CW,CH);
+
+  // Position data from resReasons[0] e.g. "1ST place – 1:23.45"
+  const posStr=resReasons[0]||'';
+  const pos=parseInt(posStr)||1;
+  const posColors=['#FFD700','#C0C0C0','#CD7F32','#aaa','#888'];
+  const posColor=posColors[Math.min(pos-1,4)];
+  const posLabels=['1ST','2ND','3RD','4TH','5TH'];
+  const posLabel=posLabels[Math.min(pos-1,4)];
+  const trophies=['🏆','🥈','🥉','',''];
+  const trophy=trophies[Math.min(pos-1,4)];
+
+  // ── POSITION BADGE ──────────────────────────────────────────────────────
+  const t=Date.now()*.001;
+  // Pulsing glow
+  const glowR=Math.min(CW,CH)*.18+Math.sin(t*3)*4;
+  const grd=cx.createRadialGradient(CW/2,CH*.28,0,CW/2,CH*.28,glowR);
+  grd.addColorStop(0,posColor.replace('#','rgba(').replace(/([0-9a-f]{2})/gi,n=>parseInt(n,16)+',')+'0.15)');
+  grd.addColorStop(0,`rgba(0,0,0,0)`);
+
+  // Big position number
+  cx.fillStyle=posColor;
+  cx.font=`bold ${Math.round(CH*.22)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText(posLabel,CW/2,CH*.25);
+
+  if(trophy){
+    cx.font=`${Math.round(CH*.08)}px monospace`;
+    cx.fillText(trophy,CW/2,CH*.13);
+  }
+
+  // Decorative line
+  const lineW=CW*.4;
+  const lineGrd=cx.createLinearGradient(CW/2-lineW/2,0,CW/2+lineW/2,0);
+  lineGrd.addColorStop(0,'transparent');
+  lineGrd.addColorStop(0.5,posColor);
+  lineGrd.addColorStop(1,'transparent');
+  cx.strokeStyle=lineGrd; cx.lineWidth=2;
+  cx.beginPath(); cx.moveTo(CW/2-lineW/2,CH*.36); cx.lineTo(CW/2+lineW/2,CH*.36); cx.stroke();
+
+  // ── STATS ───────────────────────────────────────────────────────────────
+  cx.textAlign='center'; cx.textBaseline='middle';
+
+  // Time
+  const timeStr=posStr.split('–')[1]||'';
+  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.048)}px monospace`;
+  cx.fillText(timeStr.trim(),CW/2,CH*.44);
+
+  // Coins earned
+  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.05)}px monospace`;
+  cx.fillText('+ $'+resCoins,CW/2,CH*.54);
+
+  // Bonus reasons
+  cx.fillStyle='rgba(255,255,255,.5)'; cx.font=`${Math.round(CH*.028)}px monospace`;
+  resReasons.slice(1).forEach((r,i)=>cx.fillText(r,CW/2,CH*.615+i*CH*.038));
+
+  // ── BUTTONS ─────────────────────────────────────────────────────────────
+  const bW=CW*.38, bH=CH*.1, bY=CH*.82, gap=CW*.04;
+
+  // RACE AGAIN
+  cx.fillStyle='#f0a500';
+  cx.beginPath(); cx.roundRect(CW/2-bW-gap/2,bY,bW,bH,10); cx.fill();
+  cx.fillStyle='#000'; cx.font=`bold ${Math.round(bH*.38)}px monospace`;
+  cx.fillText('▶ RACE AGAIN',CW/2-bW/2-gap/2,bY+bH/2);
+
+  // MENU
+  cx.fillStyle='rgba(255,255,255,.15)'; cx.strokeStyle='rgba(255,255,255,.4)'; cx.lineWidth=2;
+  cx.beginPath(); cx.roundRect(CW/2+gap/2,bY,bW,bH,10); cx.fill(); cx.stroke();
+  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(bH*.38)}px monospace`;
+  cx.fillText('⌂ MENU',CW/2+bW/2+gap/2,bY+bH/2);
 }
-function resultsClick(mx,my){if(my>CH*.76){if(mx<CW/2)startRace();else state='menu';}}
+
+function resultsClick(mx,my){
+  if(my>CH*.78){
+    const bW=CW*.38, gap=CW*.04;
+    if(mx<CW/2) startRace();
+    else state='menu';
+  }
+}
 
 
 // ─── TOUCH COORDINATE FIX FOR CAPACITOR/WEBVIEW ─────────────────────────────
