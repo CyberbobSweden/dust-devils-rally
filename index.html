@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2212'; // auto-updated each build
+const BUILD = '20260529.2219'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -861,14 +861,14 @@ function updateDrawWeather(cx,dt,trackIdx){
 
   if(w===1){ // RAIN
     // Spawn rain drops
-    while(weatherParticles.length<120){
+    while(weatherParticles.length<150){
       weatherParticles.push({
         x:Math.random()*CW, y:Math.random()*CH,
         vx:-0.5, vy:Math.random()*300+200,
         len:Math.random()*8+6, life:1
       });
     }
-    cx.save(); cx.globalAlpha=0.35; cx.strokeStyle='#aaddff'; cx.lineWidth=1;
+    cx.save(); cx.globalAlpha=0.55; cx.strokeStyle='#aaddff'; cx.lineWidth=1;
     weatherParticles.forEach(r=>{
       r.x+=r.vx*dt; r.y+=r.vy*dt;
       if(r.y>CH){ r.y=-10; r.x=Math.random()*CW; }
@@ -876,7 +876,7 @@ function updateDrawWeather(cx,dt,trackIdx){
     });
     cx.restore();
     // Rain overlay tint
-    cx.fillStyle='rgba(100,130,180,0.06)'; cx.fillRect(0,0,CW,CH);
+    cx.fillStyle='rgba(100,130,180,0.1)'; cx.fillRect(0,0,CW,CH);
 
   } else if(w===2){ // DUST/SAND
     while(weatherParticles.length<60){
@@ -891,7 +891,7 @@ function updateDrawWeather(cx,dt,trackIdx){
       if(d.x>CW+10){ d.x=-10; d.y=Math.random()*CH; }
       cx.beginPath();
       cx.arc(d.x,d.y,d.r,0,Math.PI*2);
-      cx.fillStyle=`rgba(210,170,100,${d.alpha})`;
+      cx.fillStyle=`rgba(220,170,90,${Math.min(0.5,d.alpha*2)})`;
       cx.fill();
     });
     cx.fillStyle='rgba(180,140,80,0.04)'; cx.fillRect(0,0,CW,CH);
@@ -1742,7 +1742,7 @@ function drawMenu(cx){
 
 function menuClick(mx,my){
   // Spotify button bottom-left
-  if(mx<=60&&my>=CH-46){
+  if(mx<=60&&my>=CH*.87-36&&my<=CH*.87){
     const url='https://open.spotify.com/artist/1zRFjbrsphxLI5HNu2SJk0';
     window.open(url,'_blank'); return;
   }
@@ -3113,6 +3113,7 @@ function loop(now){
       if(state==='racing'){ const _nosB=Math.max(1.4,cars[0].def.nos+0.35); const _top=cars[0].nosFlame>0.1?cars[0].def.top*_nosB:cars[0].def.top; drawSpeedLines(G, cars[0].speed(), _top); }
       if(state==='racing') drawDriftPops(G,cam,SC);
       // minimap hidden in full-track view
+      updateDrawWeather(G,dt,S.currentTrack||0);
       drawHUD(G, cars[0], cars, raceT);
       drawCtrl(G, ctrlL, ctrlR, ctrlN, ctrlB, cars[0], raceT);
 
