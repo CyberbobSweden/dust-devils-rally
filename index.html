@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.1703'; // auto-updated each build
+const BUILD = '20260529.2040'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -983,7 +983,7 @@ class Car{
       }
     }
     // Record ghost at 20fps using timer
-    if(this.isP&&raceTime-(this._lastGhostT||0)>=0.05){
+    if(this.isP&&raceTime-(this._lastGhostT||0)>=0.033){
       this._lastGhostT=raceTime;
       this.ghostFrames.push({t:raceTime-this._lapStartT,x:this.x,y:this.y,a:this.a});
     }
@@ -1406,6 +1406,7 @@ function drawVignette(cx) {
   cx.fillStyle=g; cx.fillRect(0,0,CW,CH);
 }
 
+let authMode='login', authEmail='', authPwd='', authMsg='', authMsgColor='#e74c3c';
 // ─── MENU ─────────────────────────────────────────────────────────────────────
 const MENU_ITEMS=['🏁 RACE','🚗 GARAGE','🗺 TRACKS','🏆 LEADERBOARD'];
 let menuSel=0;
@@ -1504,7 +1505,7 @@ function drawMenu(cx){
   cx.fillStyle='rgba(255,210,80,.55)';cx.fillText('DUST DEVILS',CW/2-1,titleY-1);
 
   // ── RALLY badge ───────────────────────────────────────────────────────────
-  const rallyY=titleY+titleSize*.18;
+  const rallyY=titleY+titleSize*.62;
   const rallyW=Math.min(170,titleSize*4.2);
   const rallyH=Math.round(titleSize*.72);
   const rallyX=CW/2-rallyW/2;
@@ -2510,8 +2511,9 @@ function drawResults(cx,cam,SC){
   // Pulsing glow
   const glowR=Math.min(CW,CH)*.18+Math.sin(t*3)*4;
   const grd=cx.createRadialGradient(CW/2,CH*.28,0,CW/2,CH*.28,glowR);
-  grd.addColorStop(0,posColor.replace('#','rgba(').replace(/([0-9a-f]{2})/gi,n=>parseInt(n,16)+',')+'0.15)');
-  grd.addColorStop(0,`rgba(0,0,0,0)`);
+  const glowColors=['rgba(255,215,0,0.15)','rgba(192,192,192,0.12)','rgba(205,127,50,0.12)','rgba(100,100,100,0.08)','rgba(80,80,80,0.08)'];
+  grd.addColorStop(0,glowColors[Math.min(pos-1,4)]);
+  grd.addColorStop(1,'rgba(0,0,0,0)');
 
   // Big position number
   cx.fillStyle=posColor;
