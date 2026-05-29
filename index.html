@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2128'; // auto-updated each build
+const BUILD = '20260529.2135'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1932,35 +1932,32 @@ function drawGarage(cx){
       cx.fillStyle=s.col; cx.beginPath(); cx.roundRect(barX+lblW,by,fw,barH,barH/2); cx.fill();
     });
 
-    // ── UPGRADES ─────────────────────────────────────────────────────────────
-    const upgTypes2=[{key:'engine',lbl:'⚡',col:'#e74c3c'},{key:'grip',lbl:'🔵',col:'#2ecc71'},{key:'nos',lbl:'💨',col:'#3498db'}];
-    const upgH2=CH*.048, upgW2=CW*.78, upgX2=CW/2-upgW2/2;
-    upgTypes2.forEach((u,i)=>{
-      const uy=CH*.635+4*(CH*.026+CH*.015)+CH*.018+i*(upgH2+CH*.01);
+    // ── UPGRADES (3 cards, portrait) ─────────────────────────────────────────
+    const _uTypes2=[{key:'engine',lbl:'⚡ ENG',col:'#e74c3c'},{key:'grip',lbl:'🔵 GRP',col:'#2ecc71'},{key:'nos',lbl:'💨 NOS',col:'#3498db'}];
+    const _uCW=CW*.78/3-4, _uCH=CH*.1, _uCY=CH*.645, _uCX=CW/2-CW*.78/2;
+    _uTypes2.forEach((u,i)=>{
+      const ux=_uCX+i*(_uCW+6);
       const lvl=getUpgrade(sel.id,u.key);
-      cx.fillStyle='rgba(255,255,255,.65)'; cx.font=`bold ${Math.round(upgH2*.75)}px monospace`;
-      cx.textAlign='left'; cx.textBaseline='middle';
-      cx.fillText(u.lbl,upgX2,uy+upgH2/2);
+      cx.fillStyle='rgba(255,255,255,.08)'; cx.strokeStyle=u.col; cx.lineWidth=1.5;
+      cx.beginPath();cx.roundRect(ux,_uCY,_uCW,_uCH,6);cx.fill();cx.stroke();
+      cx.fillStyle='rgba(255,255,255,.8)'; cx.font=`bold ${Math.round(_uCH*.18)}px monospace`;
+      cx.textAlign='center'; cx.textBaseline='middle';
+      cx.fillText(u.lbl,ux+_uCW/2,_uCY+_uCH*.24);
       for(let p=0;p<UPGRADE_MAX;p++){
-        const px=upgX2+upgW2*.12+p*(upgH2*.9+3), py=uy+upgH2*.1, ps=upgH2*.8;
+        const pw=(_uCW-8)/UPGRADE_MAX-2, ph=_uCH*.14;
         cx.fillStyle=p<lvl?u.col:'rgba(255,255,255,.15)';
-        cx.beginPath();cx.roundRect(px,py,ps,ps,3);cx.fill();
+        cx.beginPath();cx.roundRect(ux+4+p*(pw+2),_uCY+_uCH*.42,pw,ph,2);cx.fill();
       }
-      const bw=upgW2*.22, bx=upgX2+upgW2*.75;
-      if(lvl>=UPGRADE_MAX){
-        cx.fillStyle='rgba(255,255,255,.15)';cx.beginPath();cx.roundRect(bx,uy,bw,upgH2,5);cx.fill();
-        cx.fillStyle='rgba(255,255,255,.4)';cx.font=`bold ${Math.round(upgH2*.6)}px monospace`;
-        cx.textAlign='center';cx.textBaseline='middle';cx.fillText('MAX',bx+bw/2,uy+upgH2/2);
-      } else {
-        const cost=UPGRADE_COST[lvl];
-        cx.fillStyle=S.coins>=cost?u.col:'rgba(80,80,80,.5)';
-        cx.beginPath();cx.roundRect(bx,uy,bw,upgH2,5);cx.fill();
-        cx.fillStyle=S.coins>=cost?'#000':'rgba(255,255,255,.3)';cx.font=`bold ${Math.round(upgH2*.6)}px monospace`;
-        cx.textAlign='center';cx.textBaseline='middle';cx.fillText('$'+cost,bx+bw/2,uy+upgH2/2);
-      }
+      const cost=lvl>=UPGRADE_MAX?0:UPGRADE_COST[lvl];
+      const canAff=lvl<UPGRADE_MAX&&S.coins>=cost;
+      cx.fillStyle=lvl>=UPGRADE_MAX?'rgba(255,255,255,.2)':canAff?u.col:'rgba(80,80,80,.5)';
+      cx.beginPath();cx.roundRect(ux+3,_uCY+_uCH*.62,_uCW-6,_uCH*.31,4);cx.fill();
+      cx.fillStyle=lvl>=UPGRADE_MAX?'rgba(255,255,255,.4)':canAff?'#000':'rgba(255,255,255,.3)';
+      cx.font=`bold ${Math.round(_uCH*.19)}px monospace`;
+      cx.fillText(lvl>=UPGRADE_MAX?'MAX':'$'+cost,ux+_uCW/2,_uCY+_uCH*.79);
     });
 
-    const btnH=CH*.072, btnW=CW*.62, btnY=CH*.80;
+    const btnH=CH*.072, btnW=CW*.62, btnY=CH*.77;
     cx.fillStyle=isSelected?'#2ecc71':owned?'#f0a500':canAfford?'#e74c3c':'#444';
     cx.beginPath(); cx.roundRect(CW/2-btnW/2,btnY,btnW,btnH,10); cx.fill();
     cx.fillStyle=isSelected?'#000':'#fff';
@@ -2026,18 +2023,16 @@ function garageClick(mx,my){
   // Upgrade clicks
   const _upgTypes=[{key:'engine'},{key:'grip'},{key:'nos'}];
   if(land){
-    const rightX=CW*.45, upgY=CH*.42, upgH=CH*.072, upgW=(CW-rightX)*.85, upgX=rightX+8;
+    const rightX=CW*.45, _uW=(CW-rightX-16)/3-4, _uH=CH*.14, _uY=CH*.62, _uX=rightX+8;
     _upgTypes.forEach((u,i)=>{
-      const uy=upgY+i*(upgH+CH*.015);
-      const bw=upgW*.28, bx=upgX+upgW*.72;
-      if(my>=uy&&my<=uy+upgH&&mx>=bx&&mx<=bx+bw) buyUpgrade(sel.id,u.key);
+      const ux=_uX+i*(_uW+6);
+      if(my>=_uY+_uH*.6&&my<=_uY+_uH&&mx>=ux+4&&mx<=ux+_uW-4) buyUpgrade(sel.id,u.key);
     });
   } else {
-    const upgH2=CH*.048, upgW2=CW*.78, upgX2=CW/2-upgW2/2;
+    const _uCW=CW*.78/3-4, _uCH=CH*.1, _uCY=CH*.645, _uCX=CW/2-CW*.78/2;
     _upgTypes.forEach((u,i)=>{
-      const uy=CH*.635+4*(CH*.026+CH*.015)+CH*.018+i*(upgH2+CH*.01);
-      const bw=upgW2*.22, bx=upgX2+upgW2*.75;
-      if(my>=uy&&my<=uy+upgH2&&mx>=bx&&mx<=bx+bw) buyUpgrade(sel.id,u.key);
+      const ux=_uCX+i*(_uCW+6);
+      if(my>=_uCY+_uCH*.62&&my<=_uCY+_uCH&&mx>=ux+3&&mx<=ux+_uCW-3) buyUpgrade(sel.id,u.key);
     });
   }
 
@@ -2301,39 +2296,39 @@ function drawSettings(cx){
   cx.fillText('SOUND FX',labelX,y);
   _drawToggle(cx, CW*.72, y, sfxEnabled);
 
-  // ── BACK button ──
+  const bw=CW*.4, bh=CH*.075;
+
+  // ── CHANGE NAME button @ 70% ──
+  y=CH*.70;
+  cx.fillStyle='#0a1a2a'; cx.strokeStyle='#4af'; cx.lineWidth=2;
+  cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
+  cx.fillStyle='#4af'; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.font=`bold ${Math.round(CH*.032)}px monospace`;
+  cx.fillText('✎ CHANGE NAME',CW/2,y);
+  cx.fillStyle='rgba(255,255,255,.5)';
+  cx.font=`${Math.round(CH*.026)}px monospace`;
+  cx.fillText(S.name||'',CW/2,y+bh*.8);
+
+  // ── BACK button @ 82% ──
   y=CH*.82;
   cx.fillStyle='#1a1a2e'; cx.strokeStyle='#f0a500'; cx.lineWidth=2;
-  const bw=CW*.4, bh=CH*.075;
   cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
   cx.fillStyle='#f0a500'; cx.textAlign='center'; cx.textBaseline='middle';
   cx.font=`bold ${Math.round(CH*.036)}px monospace`;
   cx.fillText('◀ BACK',CW/2,y);
 
-  // ── CHANGE NAME button ──
-  y=CH*.745;
-  cx.fillStyle='#0a1a2a'; cx.strokeStyle='#4af'; cx.lineWidth=2;
-  cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
-  cx.fillStyle='#4af';
-  cx.font=`bold ${Math.round(CH*.032)}px monospace`;
-  cx.fillText('✎ CHANGE NAME',CW/2,y);
-  cx.fillStyle='rgba(255,255,255,.4)';
-  cx.font=`${Math.round(CH*.024)}px monospace`;
-  cx.fillText(S.name||'',CW/2,y+bh*.75);
-
-  // ── LOGOUT button ──
+  // ── LOGOUT button @ 93% ──
   const user=typeof firebase!=='undefined'?firebase.auth().currentUser:null;
   if(user){
-    y=CH*.92;
+    y=CH*.93;
     cx.fillStyle='#2a0a0a'; cx.strokeStyle='#e74c3c'; cx.lineWidth=2;
     cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
-    cx.fillStyle='#e74c3c';
+    cx.fillStyle='#e74c3c'; cx.textAlign='center'; cx.textBaseline='middle';
     cx.font=`bold ${Math.round(CH*.032)}px monospace`;
     cx.fillText('⏻ LOGOUT',CW/2,y);
-    // Show current user
     cx.fillStyle='rgba(255,255,255,.4)';
-    cx.font=`${Math.round(CH*.024)}px monospace`;
-    cx.fillText((user.displayName||user.email||'').substring(0,24),CW/2,y+bh*.75);
+    cx.font=`${Math.round(CH*.022)}px monospace`;
+    cx.fillText((user.displayName||user.email||'').substring(0,24),CW/2,y+bh*.8);
   }
 
   cx.restore();
@@ -2368,9 +2363,9 @@ function settingsClick(mx,my){
   const sliderW=CW*.55, sliderX=CW*.22;
 
   // Back button
-  if(my>CH*.78&&my<CH*.87){ state='menu'; sfxBeep(300,.08); return; }
+  if(my>=CH*.782&&my<CH*.858){ state='menu'; sfxBeep(300,.08); return; }
   // Change name button
-  if(my>CH*.70&&my<CH*.79){
+  if(my>=CH*.662&&my<CH*.738){
     const n=(prompt('New racer name (max 10):', S.name)||'').trim().toUpperCase().substring(0,10);
     if(n){ S.name=n; doSave();
       if(typeof firebase!=='undefined'&&firebase.auth().currentUser)
@@ -2379,7 +2374,7 @@ function settingsClick(mx,my){
     return;
   }
   // Logout button
-  if(my>CH*.87){
+  if(my>=CH*.892){
     if(typeof firebase!=='undefined' && firebase.auth().currentUser){
       firebase.auth().signOut().then(()=>{
         state='auth'; authEmail=''; authPwd=''; authMsg='';
