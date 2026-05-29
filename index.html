@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2135'; // auto-updated each build
+const BUILD = '20260529.2142'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1934,7 +1934,7 @@ function drawGarage(cx){
 
     // ── UPGRADES (3 cards, portrait) ─────────────────────────────────────────
     const _uTypes2=[{key:'engine',lbl:'⚡ ENG',col:'#e74c3c'},{key:'grip',lbl:'🔵 GRP',col:'#2ecc71'},{key:'nos',lbl:'💨 NOS',col:'#3498db'}];
-    const _uCW=CW*.78/3-4, _uCH=CH*.1, _uCY=CH*.645, _uCX=CW/2-CW*.78/2;
+    const _uCW=CW*.78/3-4, _uCH=CH*.075, _uCY=CH*.778, _uCX=CW/2-CW*.78/2;
     _uTypes2.forEach((u,i)=>{
       const ux=_uCX+i*(_uCW+6);
       const lvl=getUpgrade(sel.id,u.key);
@@ -1957,7 +1957,7 @@ function drawGarage(cx){
       cx.fillText(lvl>=UPGRADE_MAX?'MAX':'$'+cost,ux+_uCW/2,_uCY+_uCH*.79);
     });
 
-    const btnH=CH*.072, btnW=CW*.62, btnY=CH*.77;
+    const btnH=CH*.068, btnW=CW*.62, btnY=CH*.864;
     cx.fillStyle=isSelected?'#2ecc71':owned?'#f0a500':canAfford?'#e74c3c':'#444';
     cx.beginPath(); cx.roundRect(CW/2-btnW/2,btnY,btnW,btnH,10); cx.fill();
     cx.fillStyle=isSelected?'#000':'#fff';
@@ -1965,9 +1965,9 @@ function drawGarage(cx){
     cx.textAlign='center'; cx.textBaseline='middle';
     cx.fillText(isSelected?'✓ SELECTED':owned?'▶ EQUIP':'BUY $'+sel.price,CW/2,btnY+btnH/2);
 
-    const th=Math.round(Math.min(CH*.088,CW*.078));
+    const th=Math.round(Math.min(CH*.075,CW*.068));
     const gap2=3; const totalW2=cars.length*(th+gap2)-gap2;
-    const rowX=CW/2-totalW2/2; const rowY=CH*.9;
+    const rowX=CW/2-totalW2/2; const rowY=CH*.942;
     cx.save(); cx.beginPath(); cx.rect(0,rowY-2,CW,th+4); cx.clip();
     cars.forEach((car,i)=>{
       const tx=rowX+i*(th+gap2);
@@ -2029,7 +2029,7 @@ function garageClick(mx,my){
       if(my>=_uY+_uH*.6&&my<=_uY+_uH&&mx>=ux+4&&mx<=ux+_uW-4) buyUpgrade(sel.id,u.key);
     });
   } else {
-    const _uCW=CW*.78/3-4, _uCH=CH*.1, _uCY=CH*.645, _uCX=CW/2-CW*.78/2;
+    const _uCW=CW*.78/3-4, _uCH=CH*.075, _uCY=CH*.778, _uCX=CW/2-CW*.78/2;
     _upgTypes.forEach((u,i)=>{
       const ux=_uCX+i*(_uCW+6);
       if(my>=_uCY+_uCH*.62&&my<=_uCY+_uCH&&mx>=ux+3&&mx<=ux+_uCW-3) buyUpgrade(sel.id,u.key);
