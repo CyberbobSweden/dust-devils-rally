@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2142'; // auto-updated each build
+const BUILD = '20260529.2147'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1863,8 +1863,33 @@ function drawGarage(cx){
       cx.beginPath(); cx.roundRect(rightX+8+lblW,by,fw,barH,barH/2); cx.fill();
     });
 
+    // ── UPGRADES (3 cards, landscape) ───────────────────────────────────────
+    const _uLTypes=[{key:'engine',lbl:'⚡ ENG',col:'#e74c3c'},{key:'grip',lbl:'🔵 GRP',col:'#2ecc71'},{key:'nos',lbl:'💨 NOS',col:'#3498db'}];
+    const _uLW=(CW-rightX-20)/3-4, _uLH=CH*.115, _uLY=CH*.605, _uLX=rightX+8;
+    _uLTypes.forEach((u,i)=>{
+      const ux=_uLX+i*(_uLW+6);
+      const lvl=getUpgrade(sel.id,u.key);
+      cx.fillStyle='rgba(255,255,255,.08)'; cx.strokeStyle=u.col; cx.lineWidth=1.5;
+      cx.beginPath();cx.roundRect(ux,_uLY,_uLW,_uLH,6);cx.fill();cx.stroke();
+      cx.fillStyle='rgba(255,255,255,.85)'; cx.font=`bold ${Math.round(_uLH*.18)}px monospace`;
+      cx.textAlign='center'; cx.textBaseline='middle';
+      cx.fillText(u.lbl,ux+_uLW/2,_uLY+_uLH*.24);
+      for(let p=0;p<UPGRADE_MAX;p++){
+        const pw=(_uLW-10)/UPGRADE_MAX-2, ph=_uLH*.14;
+        cx.fillStyle=p<lvl?u.col:'rgba(255,255,255,.15)';
+        cx.beginPath();cx.roundRect(ux+5+p*(pw+2),_uLY+_uLH*.42,pw,ph,2);cx.fill();
+      }
+      const cost=lvl>=UPGRADE_MAX?0:UPGRADE_COST[lvl];
+      const canAff=lvl<UPGRADE_MAX&&S.coins>=cost;
+      cx.fillStyle=lvl>=UPGRADE_MAX?'rgba(255,255,255,.2)':canAff?u.col:'rgba(80,80,80,.5)';
+      cx.beginPath();cx.roundRect(ux+4,_uLY+_uLH*.62,_uLW-8,_uLH*.3,4);cx.fill();
+      cx.fillStyle=lvl>=UPGRADE_MAX?'rgba(255,255,255,.4)':canAff?'#000':'rgba(255,255,255,.3)';
+      cx.font=`bold ${Math.round(_uLH*.18)}px monospace`;
+      cx.fillText(lvl>=UPGRADE_MAX?'MAX':'$'+cost,ux+_uLW/2,_uLY+_uLH*.79);
+    });
+
     // Button - positioned to not overlap thumbnails
-    const btnH=CH*.1, btnW=(CW-rightX)*.7, btnY=CH*.70;
+    const btnH=CH*.095, btnW=(CW-rightX)*.7, btnY=CH*.745;
     cx.fillStyle=isSelected?'#2ecc71':owned?'#f0a500':canAfford?'#e74c3c':'#444';
     cx.beginPath(); cx.roundRect(rCX-btnW/2,btnY,btnW,btnH,10); cx.fill();
     cx.fillStyle=isSelected?'#000':'#fff';
@@ -2023,10 +2048,10 @@ function garageClick(mx,my){
   // Upgrade clicks
   const _upgTypes=[{key:'engine'},{key:'grip'},{key:'nos'}];
   if(land){
-    const rightX=CW*.45, _uW=(CW-rightX-16)/3-4, _uH=CH*.14, _uY=CH*.62, _uX=rightX+8;
+    const rightX=CW*.45, _uLW2=(CW-rightX-20)/3-4, _uLH2=CH*.115, _uLY2=CH*.605, _uLX2=rightX+8;
     _upgTypes.forEach((u,i)=>{
-      const ux=_uX+i*(_uW+6);
-      if(my>=_uY+_uH*.6&&my<=_uY+_uH&&mx>=ux+4&&mx<=ux+_uW-4) buyUpgrade(sel.id,u.key);
+      const ux=_uLX2+i*(_uLW2+6);
+      if(my>=_uLY2+_uLH2*.62&&my<=_uLY2+_uLH2&&mx>=ux+4&&mx<=ux+_uLW2-4) buyUpgrade(sel.id,u.key);
     });
   } else {
     const _uCW=CW*.78/3-4, _uCH=CH*.075, _uCY=CH*.778, _uCX=CW/2-CW*.78/2;
