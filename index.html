@@ -83,7 +83,7 @@ canvas { display: block; }
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.1055'; // auto-updated each build
+const BUILD = '20260530.1102'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2878,35 +2878,17 @@ function drawLeaderboard(cx){
 }
 
 function leaderboardClick(mx,my){
-  if(my<52&&mx<90){state='menu';return;}
-  // Track arrow navigation
-  if(my>=40&&my<=60){
-    const ul=S.unlockedTracks||[0];
-    const cur=S.currentTrack||0;
-    const idx=ul.indexOf(cur);
-    if(mx>=CW/2-110&&mx<=CW/2-84){ // ◀ prev track
-      const prev=ul[(idx-1+ul.length)%ul.length];
-      S.currentTrack=prev; activateTrack(prev); doSave();
-      globalScores=null; if(!scoresLoading) fbLoad(); return;
-    }
-    if(mx>=CW/2+84&&mx<=CW/2+110){ // ▶ next track
-      const next=ul[(idx+1)%ul.length];
-      S.currentTrack=next; activateTrack(next); doSave();
-      globalScores=null; if(!scoresLoading) fbLoad(); return;
-    }
+  // Back button - large area at bottom OR top-left
+  if((my>CH*.84)||(my<CH*.12&&mx<CW*.15)){
+    state='menu'; sfxBeep(300,.08); return;
   }
-  // Tabs
-  if(my>=62&&my<=84){
-    if(mx>=CW/2-80&&mx<=CW/2+4){lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoad();}
-    if(mx>=CW/2+4&&mx<=CW/2+82)lbTab=1;
-  }
-  // Reload / Clear buttons
-  if(my>=62&&my<=84){
-    if(lbTab===0&&mx>=CW-60&&mx<=CW-10){globalScores=null;fbLoad();}
-    if(lbTab===1&&mx>=CW-80&&mx<=CW-10){ // clear local for this track
-      const tid=S.currentTrack||0;
-      S.scores=(S.scores||[]).filter(s=>s.track!==tid);
-      doSave(); sfxBeep(330,.1);
+  // Track tabs at top
+  const tabW=Math.min(CW*.18,110), tabH=CH*.065, tabY=CH*.12;
+  if(my>=tabY&&my<=tabY+tabH){
+    const unlockedTr=S.unlockedTracks||[0];
+    const ti=Math.floor(mx/tabW);
+    if(ti>=0&&ti<unlockedTr.length){
+      lbTrack=unlockedTr[ti]; loadLbScores(); sfxBeep(440,.06);
     }
   }
 }
@@ -3369,11 +3351,12 @@ function loop(now){
           showLapPopup(_lapT, _isBestLap);
         }
         // Position change detection
-        const _curPos=sorted.findIndex(c=>c.isP)+1;
-        if(_lastPos>0&&_curPos!==_lastPos&&raceT>3){
+        const _cSorted=[...cars].sort((a,b)=>b.lap!==a.lap?b.lap-a.lap:b.dist-a.dist);
+        const _curPos=_cSorted.findIndex(c=>c.isP)+1;
+        if(_lastPos>0&&_curPos>0&&_curPos!==_lastPos&&raceT>3){
           _posDir=_curPos<_lastPos?1:-1; _posFlash=1.5; sfxOvertake(_posDir>0);
         }
-        _lastPos=_curPos;
+        if(_curPos>0) _lastPos=_curPos;
         if(pl.lap>=(TDEF&&TDEF.laps?TDEF.laps:LAPS)) finishRace();
       }
 
