@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.2136'; // auto-updated each build
+const BUILD = '20260530.2355'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1783,10 +1783,11 @@ function drawMenu(cx){
   }
 
   // ── Menu buttons ──────────────────────────────────────────────────────────
-  const btnH=Math.min(72,Math.floor((CH*.92-CH*.50)/4));
+  const _menuN=MENU_ITEMS.length, _menuGapMin=6;
+  const btnH=Math.min(58,Math.floor((CH*.40-_menuGapMin*(_menuN-1))/_menuN));
   const btnW=Math.min(360,CW*.78);
   const menuTop=CH*.50;
-  const gap=(CH*.90-menuTop-btnH*MENU_ITEMS.length)/(MENU_ITEMS.length-1);
+  const gap=(CH*.40-btnH*_menuN)/(_menuN-1);
 
   MENU_ITEMS.forEach((label,i)=>{
     const by=menuTop+i*(btnH+gap);
@@ -1890,10 +1891,11 @@ function menuClick(mx,my){
     if(adminTaps>=7){ adminTaps=0; sfxBeep(660,.12); tryAdminAction(); return; }
   }
   // MUST match drawMenu calculations exactly
-  const btnH=Math.min(72,Math.floor((CH*.92-CH*.50)/4));
+  const _menuN=MENU_ITEMS.length, _menuGapMin=6;
+  const btnH=Math.min(58,Math.floor((CH*.40-_menuGapMin*(_menuN-1))/_menuN));
   const btnW=Math.min(360,CW*.78);
   const menuTop=CH*.50;
-  const gap=(CH*.90-menuTop-btnH*MENU_ITEMS.length)/(MENU_ITEMS.length-1);
+  const gap=(CH*.40-btnH*_menuN)/(_menuN-1);
   MENU_ITEMS.forEach((_,i)=>{
     const by=menuTop+i*(btnH+gap);
     if(mx>=CW/2-btnW/2&&mx<=CW/2+btnW/2&&my>=by&&my<=by+btnH){
@@ -2279,7 +2281,8 @@ function drawStats(cx){
     cx.textAlign='center'; cx.fillText('RECENT RACES',CW/2,y);
     y+=CH*.04;
     _hist.slice(0,5).forEach((r,i)=>{
-      const _tn=ALL_TRACKS[parseInt(r.track.replace('track_',''))]?.name||r.track;
+      const tidx=typeof r.track==='string'?parseInt(r.track.replace('track_','')):r.track;
+      const _tn=ALL_TRACKS[tidx]?.name||('Track '+(tidx+1));
       const _t=r.time,_m=Math.floor(_t/60),_s=String(Math.floor(_t%60)).padStart(2,'0'),_ms=String(Math.floor((_t%1)*100)).padStart(2,'0');
       const _pd=['🥇','🥈','🥉','4️⃣','5️⃣'][r.pos-1]||r.pos;
       cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`${Math.round(CH*.028)}px monospace`;
