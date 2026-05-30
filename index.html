@@ -83,7 +83,7 @@ canvas { display: block; }
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.1109'; // auto-updated each build
+const BUILD = '20260530.1113'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -746,7 +746,7 @@ function loadLbScores(){
   if(typeof firebase==='undefined') return;
   const db=firebase.database();
   window._lbScores=window._lbScores||{};
-  const tid='track_'+lbTrack;
+  const tid=typeof lbTrack==='number'?lbTrack:parseInt(lbTrack)||0;
   db.ref('scores_v2').orderByChild('track').equalTo(tid).limitToFirst(8).once('value',snap=>{
     const rows=[];
     snap.forEach(s=>rows.push(s.val()));
@@ -2969,7 +2969,7 @@ function drawResults(cx,cam,SC){
   }
 
   // Coins + bonuses
-  iy=Math.max(iy, ty+CH*.018);
+  iy=Math.max(iy, ty+CH*.018)+CH*.008;
   cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.038)}px monospace`;
   cx.textAlign='center'; cx.textBaseline='middle';
   cx.fillText('+ $'+resCoins,CW/2,iy);
