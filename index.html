@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260531.0140'; // auto-updated each build
+const BUILD = '20260531.0200'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -743,28 +743,26 @@ function checkChallenges(entry, car, isPB, lapT){
 }
 
 // ─── LEADERBOARD LOADER ───────────────────────────────────────────────────────
-function loadLbScores(){
+async function loadLbScores(){
   window._lbScores=window._lbScores||{};
   const tid=typeof lbTrack==='number'?lbTrack:parseInt(lbTrack)||0;
-  // Always include local best time
   const _localBest=S.bestTimes&&S.bestTimes[tid];
   const _localEntry=_localBest?[{name:S.name||'YOU',time:_localBest,pid:S.pid||'local',local:true}]:[];
-  if(typeof firebase==='undefined'){
-    window._lbScores[tid]=_localEntry;
-    return;
-  }
-  const db=firebase.database();
-  db.ref('scores_v2').orderByChild('track').equalTo(tid).limitToFirst(50).once('value',snap=>{
-    const rows=[];
-    snap.forEach(s=>rows.push(s.val()));
-    // Merge local entry if not already in firebase results
-    if(_localBest){
-      const alreadyIn=rows.some(r=>r.pid&&r.pid===S.pid);
-      if(!alreadyIn) rows.push(..._localEntry);
-    }
+  if(!FB_URL){ window._lbScores[tid]=_localEntry; return; }
+  try {
+    // Use REST API with orderBy track
+    const url=FB_URL+'/scores_v2.json?orderBy=%22track%22&equalTo='+tid+'&limitToFirst=50';
+    const r=await fetch(url);
+    const d=await r.json();
+    const rows=d?Object.values(d).filter(v=>v&&typeof v.time==='number'):[];
+    // Merge local if pid not already present
+    if(_localBest&&!rows.some(r=>r.pid&&r.pid===S.pid)) rows.push(..._localEntry);
     rows.sort((a,b)=>(a.time||99)-(b.time||99));
     window._lbScores[tid]=rows;
-  });
+  } catch(e){
+    console.warn('lb load failed',e);
+    window._lbScores[tid]=_localEntry;
+  }
 }
 
 // ─── ACHIEVEMENTS ─────────────────────────────────────────────────────────────
@@ -2253,7 +2251,7 @@ function drawStats(cx){
   if(!scroll.stats) scroll.stats=0;
   const _sOff=scroll.stats;
   const col1=CW*.06, rowH=Math.round(CH*.1); // bigger rows for mobile
-  let y=CH*.16-_sOff;
+  let y=CH*.18-_sOff;
 
   // Career stats with trophy icons
   const stats=[
@@ -3109,6 +3107,11 @@ C.addEventListener('touchend',e=>{
   const t=e.changedTouches[0]; const p=touchXY(t);
   if(state==='garage') garageClick(p.x,p.y);
   else if(state==='tracks') trackSelectClick(p.x,p.y);
+  else if(state==='stats') statsClick(p.x,p.y);
+  else if(state==='achievements') achievementsClick(p.x,p.y);
+  else if(state==='leaderboard') leaderboardClick(p.x,p.y);
+  else if(state==='settings') settingsClick(p.x,p.y);
+  else if(state==='results') resultsClick(p.x,p.y);
   scrollTouchEnd();
   for(const t of e.changedTouches) delete AT[t.identifier];
   updCtrl();
