@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.1600'; // auto-updated each build
+const BUILD = '20260530.1620'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1918,7 +1918,13 @@ function drawTrackSelect(cx){
   cx.fillStyle='#0a0a12';cx.fillRect(0,0,CW,CH);
   // Header
   cx.fillStyle='rgba(0,0,0,.5)';cx.fillRect(0,0,CW,52);
-  cx.textAlign='left';cx.fillStyle='rgba(255,255,255,.4)';cx.font='12px monospace';cx.fillText('< BACK',12,33);
+  // Big BACK button
+  const _tbW=Math.max(110,CW*.18), _tbH=Math.round(CH*.075);
+  cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.3)'; cx.lineWidth=1.5;
+  cx.beginPath();cx.roundRect(6,4,_tbW,_tbH,8);cx.fill();cx.stroke();
+  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(_tbH*.46)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('◀ BACK',6+_tbW/2,4+_tbH/2);
   cx.textAlign='center';cx.fillStyle='#ffdd33';cx.font='bold 18px monospace';cx.fillText('SELECT TRACK',CW/2,33);
   if(!S.unlockedTracks)S.unlockedTracks=[0];
 
@@ -2221,8 +2227,11 @@ function drawStats(cx){
   cx.fillStyle='#2ecc71'; cx.font=`bold ${Math.round(CH*.055)}px monospace`;
   cx.textAlign='center'; cx.textBaseline='middle';
   cx.fillText('📊 MY STATS',CW/2,CH*.07);
-  cx.fillStyle='rgba(255,255,255,.4)'; cx.font='12px monospace';
-  cx.fillText('< BACK',12,CH*.07);
+  cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.25)'; cx.lineWidth=1.5;
+  cx.beginPath();cx.roundRect(6,4,Math.max(110,CW*.16),CH*.075,8);cx.fill();cx.stroke();
+  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.032)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('◀ BACK',6+Math.max(110,CW*.16)/2,4+CH*.0375);
 
   const col1=CW*.08, col2=CW*.55, rowH=CH*.072;
   let y=CH*.15;
@@ -2788,6 +2797,66 @@ function resultsClick(mx,my){
     else state='menu';
   }
 }
+
+function garageClick(mx,my){
+  const sel=CAR_DEFS[garageIdx]||CAR_DEFS[0];
+  const isUnlocked=(S.unlocked||['banger']).includes(sel.id);
+  const arW=CH*.13;
+
+  // BACK button - top bar area
+  if(my<CH*.1){ state='menu'; sfxBeep(300,.08); return; }
+
+  // Left/right arrows
+  if(mx<arW&&my>CH*.28&&my<CH*.72){
+    if(garageIdx>0){ garageIdx--; sfxBeep(400,.06); } return;
+  }
+  if(mx>CW-arW&&my>CH*.28&&my<CH*.72){
+    if(garageIdx<CAR_DEFS.length-1){ garageIdx++; sfxBeep(400,.06); } return;
+  }
+
+  // Right panel interactions (mx > CW*.45)
+  if(mx<CW*.45) return; // left panel = car display only
+
+  const rX=CW*.48, rW=CW*.5;
+
+  // Color swatches
+  const _cols=['#ff3333','#ff8800','#ffdd00','#33cc33','#3399ff','#cc44ff','#ffffff','#777'];
+  const swSz=Math.round(Math.min(CH*.065,rW*.1));
+  const swY=CH*.58;
+  if(my>=swY&&my<=swY+swSz){
+    const ci=Math.floor((mx-rX)/(swSz+4));
+    if(ci>=0&&ci<_cols.length){
+      if(!S.carColors)S.carColors={};
+      S.carColors[sel.id]=_cols[ci]; doSave(); sfxBeep(660,.06); return;
+    }
+  }
+
+  // Upgrade buttons
+  if(isUnlocked&&my>=CH*.67&&my<=CH*.67+CH*.072){
+    const ucW=rW*.92/3-4;
+    const uTypes=[{k:'engine'},{k:'grip'},{k:'nos'}];
+    uTypes.forEach((u,i)=>{
+      const ux=rX+i*(ucW+6);
+      if(mx>=ux&&mx<=ux+ucW) buyUpgrade(sel.id,u.k);
+    });
+    return;
+  }
+
+  // Action button
+  const btnW=rW*.92, btnH=CH*.105, btnY=CH*.82;
+  if(my>=btnY&&my<=btnY+btnH&&mx>=rX&&mx<=rX+btnW){
+    if(isUnlocked){
+      S.selected=sel.id; doSave(); sfxBeep(440,.1);
+    } else if(S.coins>=sel.price){
+      S.coins-=sel.price;
+      if(!S.unlocked) S.unlocked=['banger'];
+      S.unlocked.push(sel.id); S.selected=sel.id; doSave();
+      sfxBeep(660,.08);setTimeout(()=>sfxBeep(880,.1),100);setTimeout(()=>sfxBeep(1100,.15),220);
+      window._unlockFlash=1.5;
+    }
+  }
+}
+
 
 // ─── TOUCH COORDINATE FIX FOR CAPACITOR/WEBVIEW ─────────────────────────────
 function touchXY(t){
