@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260531.0045'; // auto-updated each build
+const BUILD = '20260531.0100'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2079,9 +2079,7 @@ function drawGarage(cx){
 
   // Background
   cx.fillStyle='#080810'; cx.fillRect(0,0,CW,CH);
-  const bg=cx.createRadialGradient(CW*.25,CH*.5,0,CW*.25,CH*.5,CW*.5);
-  bg.addColorStop(0,_hex6(selCol)+'33'); bg.addColorStop(1,'transparent');
-  cx.fillStyle=bg; cx.fillRect(0,0,CW,CH);
+  // Subtle neutral bg - no color tint on background
 
   // ── TOP BAR ───────────────────────────────────────────────────────────────
   cx.fillStyle='rgba(0,0,0,.4)'; cx.fillRect(0,0,CW,CH*.1);
