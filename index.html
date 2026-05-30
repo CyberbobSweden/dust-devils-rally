@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260530.0140'; // auto-updated each build
+const BUILD = '20260530.0152'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -858,47 +858,46 @@ function updateDrawWeather(cx,dt,trackIdx){
   const w=TRACK_WEATHER[trackIdx]||0;
   if(w===0) return;
   weatherT+=dt;
+  const t=weatherT;
 
-  if(w===1){ // RAIN
-    // Spawn rain drops
-    while(weatherParticles.length<150){
-      weatherParticles.push({
-        x:Math.random()*CW, y:Math.random()*CH,
-        vx:-0.5, vy:Math.random()*300+200,
-        len:Math.random()*8+6, life:1
-      });
-    }
-    cx.save(); cx.globalAlpha=0.55; cx.strokeStyle='#aaddff'; cx.lineWidth=1;
-    weatherParticles.forEach(r=>{
-      r.x+=r.vx*dt; r.y+=r.vy*dt;
-      if(r.y>CH){ r.y=-10; r.x=Math.random()*CW; }
-      cx.beginPath(); cx.moveTo(r.x,r.y); cx.lineTo(r.x+r.vx*0.08,r.y-r.len); cx.stroke();
-    });
-    cx.restore();
-    // Rain overlay tint
-    cx.fillStyle='rgba(100,130,180,0.1)'; cx.fillRect(0,0,CW,CH);
-
-  } else if(w===2){ // DUST - subtle slow drifting haze
-    while(weatherParticles.length<35){
-      weatherParticles.push({
-        x:Math.random()*CW, y:Math.random()*CH,
-        vx:Math.random()*25+8, vy:(Math.random()-0.5)*8,
-        r:Math.random()*18+8,
-        alpha:Math.random()*0.08+0.03
-      });
-    }
+  if(w===1){ // RAIN - scanline streaks, pure screen overlay
     cx.save();
-    weatherParticles.forEach(d=>{
-      d.x+=d.vx*dt; d.y+=d.vy*dt;
-      if(d.x>CW+d.r){ d.x=-d.r; d.y=Math.random()*CH; }
-      cx.globalAlpha=d.alpha;
-      cx.fillStyle='rgba(220,190,120,1)';
-      cx.beginPath();cx.arc(d.x,d.y,d.r,0,Math.PI*2);cx.fill();
-    });
+    // Moving rain streaks as screen overlay
+    const numDrops=80;
+    cx.strokeStyle='rgba(180,210,255,0.35)'; cx.lineWidth=1;
+    for(let i=0;i<numDrops;i++){
+      // Use sin/cos with time offset for pseudo-random but non-moving look
+      const seed=i*7.3+t*0.4;
+      const x=((i*173.7+t*60)%CW+CW)%CW;
+      const y=((i*97.3+t*180)%CH+CH)%CH;
+      const len=8+Math.sin(i*3.7)*4;
+      cx.globalAlpha=0.3+Math.sin(i*2.1)*0.15;
+      cx.beginPath();cx.moveTo(x,y);cx.lineTo(x-1,y+len);cx.stroke();
+    }
+    // Blue tint overlay
+    cx.globalAlpha=0.07; cx.fillStyle='#5599cc'; cx.fillRect(0,0,CW,CH);
     cx.restore();
-    cx.fillStyle='rgba(180,140,70,0.04)'; cx.fillRect(0,0,CW,CH);
+
+  } else if(w===2){ // DUST - warm haze overlay + slow screen blobs
+    // Just a warm color overlay that pulses slightly
+    const pulse=0.5+Math.sin(t*0.8)*0.5;
+    cx.fillStyle=`rgba(180,140,60,${0.04+pulse*0.03})`; cx.fillRect(0,0,CW,CH);
+    // A few large soft blobs fixed on screen edges
+    cx.save();
+    for(let i=0;i<8;i++){
+      const x=(i%4)*(CW/3)+Math.sin(t*0.3+i)*20;
+      const y=i<4?-30:CH+30;
+      const r=60+Math.sin(t*0.5+i*1.7)*20;
+      cx.globalAlpha=0.06+Math.sin(t*0.4+i)*0.03;
+      cx.fillStyle='rgba(210,170,90,1)';
+      cx.beginPath();cx.arc(x,y,r,0,Math.PI*2);cx.fill();
+    }
+    cx.restore();
 
   } else if(w===3){ // OVERCAST
+    cx.fillStyle='rgba(60,60,80,0.08)'; cx.fillRect(0,0,CW,CH);
+  }
+}
     cx.fillStyle='rgba(60,60,80,0.08)'; cx.fillRect(0,0,CW,CH);
   }
 }
@@ -2747,8 +2746,8 @@ function drawResults(cx,cam,SC){
 
   // ── Results table ─────────────────────────────────────────────────────────
   const _res=window._raceResults||[];
-  const rowH=CH*.073, tW=CW*.78, tX=CW/2-tW/2;
-  let ty=CH*.33;
+  const rowH=CH*.065, tW=CW*.78, tX=CW/2-tW/2;
+  let ty=CH*.315;
   if(_res.length>0){
     _res.forEach((r,i)=>{
       cx.fillStyle=r.isPlayer?'rgba(240,165,0,0.18)':'rgba(255,255,255,0.05)';
@@ -2761,7 +2760,7 @@ function drawResults(cx,cam,SC){
       // Name
       cx.fillStyle=r.isPlayer?'#fff':'rgba(255,255,255,.75)';
       cx.font=`${r.isPlayer?'bold ':''}${Math.round(rowH*.43)}px monospace`;
-      cx.fillText((r.name||'???').substring(0,10),tX+tW*.2,ty+rowH*.48);
+      cx.fillText((r.name||'???').substring(0,12),tX+tW*.2,ty+rowH*.48);
       // Time (player only)
       if(r.isPlayer&&r.time){
         const t=r.time,m=Math.floor(t/60),s=String(Math.floor(t%60)).padStart(2,'0'),ms=String(Math.floor((t%1)*100)).padStart(2,'0');
@@ -2779,14 +2778,15 @@ function drawResults(cx,cam,SC){
   }
 
   // Coins + bonuses
-  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.04)}px monospace`;
+  const bonusY=ty+CH*.02;
+  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.038)}px monospace`;
   cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText('+ $'+resCoins,CW/2,ty+CH*.025);
-  cx.fillStyle='rgba(255,255,255,.45)'; cx.font=`${Math.round(CH*.025)}px monospace`;
-  resReasons.slice(1).forEach((r,i)=>cx.fillText(r,CW/2,ty+CH*.065+i*CH*.032));
+  cx.fillText('+ $'+resCoins,CW/2,bonusY);
+  cx.fillStyle='rgba(255,255,255,.45)'; cx.font=`${Math.round(CH*.022)}px monospace`;
+  resReasons.slice(1,3).forEach((r,i)=>cx.fillText(r,CW/2,bonusY+CH*.05+i*CH*.028));
 
   // Buttons
-  const bW=CW*.38, bH=CH*.1, bY=CH*.82, gap=CW*.04;
+  const bW=CW*.38, bH=CH*.09, bY=CH*.875, gap=CW*.04;
   cx.fillStyle='#f0a500';
   cx.beginPath();cx.roundRect(CW/2-bW-gap/2,bY,bW,bH,10);cx.fill();
   cx.fillStyle='#000'; cx.font=`bold ${Math.round(bH*.38)}px monospace`;
