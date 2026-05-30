@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260530.0130'; // auto-updated each build
+const BUILD = '20260530.0140'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -878,31 +878,25 @@ function updateDrawWeather(cx,dt,trackIdx){
     // Rain overlay tint
     cx.fillStyle='rgba(100,130,180,0.1)'; cx.fillRect(0,0,CW,CH);
 
-  } else if(w===2){ // DUST/SAND - white horizontal streaks
-    while(weatherParticles.length<80){
+  } else if(w===2){ // DUST - subtle slow drifting haze
+    while(weatherParticles.length<35){
       weatherParticles.push({
         x:Math.random()*CW, y:Math.random()*CH,
-        vx:Math.random()*180+80, vy:(Math.random()-0.5)*15,
-        len:Math.random()*30+10,
-        alpha:Math.random()*0.45+0.2,
-        r:Math.random()*1.5+0.5
+        vx:Math.random()*25+8, vy:(Math.random()-0.5)*8,
+        r:Math.random()*18+8,
+        alpha:Math.random()*0.08+0.03
       });
     }
     cx.save();
     weatherParticles.forEach(d=>{
       d.x+=d.vx*dt; d.y+=d.vy*dt;
-      if(d.x>CW+d.len){ d.x=-d.len; d.y=Math.random()*CH; }
+      if(d.x>CW+d.r){ d.x=-d.r; d.y=Math.random()*CH; }
       cx.globalAlpha=d.alpha;
-      cx.strokeStyle='rgba(255,240,210,0.9)';
-      cx.lineWidth=d.r;
-      cx.beginPath();
-      cx.moveTo(d.x,d.y);
-      cx.lineTo(d.x-d.len,d.y+d.vy*0.1);
-      cx.stroke();
+      cx.fillStyle='rgba(220,190,120,1)';
+      cx.beginPath();cx.arc(d.x,d.y,d.r,0,Math.PI*2);cx.fill();
     });
     cx.restore();
-    // Haze overlay
-    cx.fillStyle='rgba(200,160,80,0.07)'; cx.fillRect(0,0,CW,CH);
+    cx.fillStyle='rgba(180,140,70,0.04)'; cx.fillRect(0,0,CW,CH);
 
   } else if(w===3){ // OVERCAST
     cx.fillStyle='rgba(60,60,80,0.08)'; cx.fillRect(0,0,CW,CH);
@@ -2728,77 +2722,78 @@ let resCoins=0,resReasons=[];
 
 function drawResults(cx,cam,SC){
   drawTrack(cx,cam,SC); drawVignette(cx);
-  cx.fillStyle='rgba(0,0,0,.82)'; cx.fillRect(0,0,CW,CH);
+  cx.fillStyle='rgba(0,0,0,.85)'; cx.fillRect(0,0,CW,CH);
 
-  // Position data from resReasons[0] e.g. "1ST place – 1:23.45"
+  // Header: position + trophy
   const posStr=resReasons[0]||'';
-  const pos=parseInt(posStr)||1;
+  const pos=Math.max(1,parseInt(posStr)||1);
   const posColors=['#FFD700','#C0C0C0','#CD7F32','#aaa','#888'];
-  const posColor=posColors[Math.min(pos-1,4)];
   const posLabels=['1ST','2ND','3RD','4TH','5TH'];
-  const posLabel=posLabels[Math.min(pos-1,4)];
   const trophies=['🏆','🥈','🥉','',''];
-  const trophy=trophies[Math.min(pos-1,4)];
 
-  // ── POSITION BADGE ──────────────────────────────────────────────────────
-  const t=Date.now()*.001;
-  // Pulsing glow
-  const glowR=Math.min(CW,CH)*.18+Math.sin(t*3)*4;
-  const grd=cx.createRadialGradient(CW/2,CH*.28,0,CW/2,CH*.28,glowR);
-  const glowColors=['rgba(255,215,0,0.15)','rgba(192,192,192,0.12)','rgba(205,127,50,0.12)','rgba(100,100,100,0.08)','rgba(80,80,80,0.08)'];
-  grd.addColorStop(0,glowColors[Math.min(pos-1,4)]);
-  grd.addColorStop(1,'rgba(0,0,0,0)');
-
-  // Big position number
-  // Trophy first (top)
-  if(trophy){
-    cx.font=`${Math.round(CH*.09)}px monospace`;
-    cx.textAlign='center'; cx.textBaseline='middle';
-    cx.fillText(trophy,CW/2,CH*.1);
+  cx.textAlign='center'; cx.textBaseline='middle';
+  if(trophies[pos-1]){
+    cx.font=`${Math.round(CH*.07)}px monospace`;
+    cx.fillText(trophies[pos-1],CW/2,CH*.09);
   }
-  // Position text below trophy with gap
-  cx.fillStyle=posColor;
-  cx.font=`bold ${Math.round(CH*.2)}px monospace`;
-  cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText(posLabel,CW/2,CH*.27);
-
-  // Decorative line
-  const lineW=CW*.4;
-  const lineGrd=cx.createLinearGradient(CW/2-lineW/2,0,CW/2+lineW/2,0);
-  lineGrd.addColorStop(0,'transparent');
-  lineGrd.addColorStop(0.5,posColor);
-  lineGrd.addColorStop(1,'transparent');
-  cx.strokeStyle=lineGrd; cx.lineWidth=2;
-  cx.beginPath(); cx.moveTo(CW/2-lineW/2,CH*.36); cx.lineTo(CW/2+lineW/2,CH*.36); cx.stroke();
-
-  // ── STATS ───────────────────────────────────────────────────────────────
-  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillStyle=posColors[pos-1]||'#aaa';
+  cx.font=`bold ${Math.round(CH*.11)}px monospace`;
+  cx.fillText(posLabels[pos-1]||'',CW/2,CH*.19);
 
   // Time
-  const timeStr=posStr.split('–')[1]||'';
-  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.048)}px monospace`;
-  cx.fillText(timeStr.trim(),CW/2,CH*.44);
+  const timeStr=(posStr.split('–')[1]||'').trim();
+  cx.fillStyle='rgba(255,255,255,.85)'; cx.font=`bold ${Math.round(CH*.042)}px monospace`;
+  cx.fillText(timeStr,CW/2,CH*.275);
 
-  // Coins earned
-  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.05)}px monospace`;
-  cx.fillText('+ $'+resCoins,CW/2,CH*.54);
+  // ── Results table ─────────────────────────────────────────────────────────
+  const _res=window._raceResults||[];
+  const rowH=CH*.073, tW=CW*.78, tX=CW/2-tW/2;
+  let ty=CH*.33;
+  if(_res.length>0){
+    _res.forEach((r,i)=>{
+      cx.fillStyle=r.isPlayer?'rgba(240,165,0,0.18)':'rgba(255,255,255,0.05)';
+      cx.beginPath();cx.roundRect(tX,ty,tW,rowH-3,5);cx.fill();
+      if(r.isPlayer){cx.strokeStyle='rgba(240,165,0,.5)';cx.lineWidth=1.5;cx.beginPath();cx.roundRect(tX,ty,tW,rowH-3,5);cx.stroke();}
+      // Position
+      cx.fillStyle=posColors[i]||'#666'; cx.font=`bold ${Math.round(rowH*.48)}px monospace`;
+      cx.textAlign='left'; cx.textBaseline='middle';
+      cx.fillText(posLabels[i]||`${i+1}`,tX+8,ty+rowH*.48);
+      // Name
+      cx.fillStyle=r.isPlayer?'#fff':'rgba(255,255,255,.75)';
+      cx.font=`${r.isPlayer?'bold ':''}${Math.round(rowH*.43)}px monospace`;
+      cx.fillText((r.name||'???').substring(0,10),tX+tW*.2,ty+rowH*.48);
+      // Time (player only)
+      if(r.isPlayer&&r.time){
+        const t=r.time,m=Math.floor(t/60),s=String(Math.floor(t%60)).padStart(2,'0'),ms=String(Math.floor((t%1)*100)).padStart(2,'0');
+        cx.fillStyle='rgba(255,255,255,.6)'; cx.textAlign='right';
+        cx.font=`${Math.round(rowH*.38)}px monospace`;
+        cx.fillText(m+':'+s+'.'+ms,tX+tW-8,ty+rowH*.48);
+      }
+      ty+=rowH;
+    });
+  } else {
+    // Fallback: just show coins
+    cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.05)}px monospace`;
+    cx.textAlign='center';
+    cx.fillText('+ $'+resCoins,CW/2,CH*.5);
+  }
 
-  // Bonus reasons
-  cx.fillStyle='rgba(255,255,255,.5)'; cx.font=`${Math.round(CH*.028)}px monospace`;
-  resReasons.slice(1).forEach((r,i)=>cx.fillText(r,CW/2,CH*.615+i*CH*.038));
+  // Coins + bonuses
+  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.04)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('+ $'+resCoins,CW/2,ty+CH*.025);
+  cx.fillStyle='rgba(255,255,255,.45)'; cx.font=`${Math.round(CH*.025)}px monospace`;
+  resReasons.slice(1).forEach((r,i)=>cx.fillText(r,CW/2,ty+CH*.065+i*CH*.032));
 
-  // ── BUTTONS ─────────────────────────────────────────────────────────────
+  // Buttons
   const bW=CW*.38, bH=CH*.1, bY=CH*.82, gap=CW*.04;
-
-  // RACE AGAIN
   cx.fillStyle='#f0a500';
-  cx.beginPath(); cx.roundRect(CW/2-bW-gap/2,bY,bW,bH,10); cx.fill();
+  cx.beginPath();cx.roundRect(CW/2-bW-gap/2,bY,bW,bH,10);cx.fill();
   cx.fillStyle='#000'; cx.font=`bold ${Math.round(bH*.38)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
   cx.fillText('▶ RACE AGAIN',CW/2-bW/2-gap/2,bY+bH/2);
-
-  // MENU
   cx.fillStyle='rgba(255,255,255,.15)'; cx.strokeStyle='rgba(255,255,255,.4)'; cx.lineWidth=2;
-  cx.beginPath(); cx.roundRect(CW/2+gap/2,bY,bW,bH,10); cx.fill(); cx.stroke();
+  cx.beginPath();cx.roundRect(CW/2+gap/2,bY,bW,bH,10);cx.fill();cx.stroke();
   cx.fillStyle='#fff'; cx.font=`bold ${Math.round(bH*.38)}px monospace`;
   cx.fillText('⌂ MENU',CW/2+bW/2+gap/2,bY+bH/2);
 }
