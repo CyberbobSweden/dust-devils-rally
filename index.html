@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260530.0220'; // auto-updated each build
+const BUILD = '20260530.0231'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -860,37 +860,30 @@ function updateDrawWeather(cx,dt,trackIdx){
   weatherT+=dt;
   const t=weatherT;
 
-  if(w===1){ // RAIN - scanline streaks, pure screen overlay
+  if(w===1){ // RAIN
     cx.save();
-    // Moving rain streaks as screen overlay
-    const numDrops=80;
-    cx.strokeStyle='rgba(180,210,255,0.35)'; cx.lineWidth=1;
-    for(let i=0;i<numDrops;i++){
-      // Use sin/cos with time offset for pseudo-random but non-moving look
-      const seed=i*7.3+t*0.4;
-      const x=((i*173.7+t*60)%CW+CW)%CW;
-      const y=((i*97.3+t*180)%CH+CH)%CH;
-      const len=8+Math.sin(i*3.7)*4;
-      cx.globalAlpha=0.3+Math.sin(i*2.1)*0.15;
-      cx.beginPath();cx.moveTo(x,y);cx.lineTo(x-1,y+len);cx.stroke();
+    cx.strokeStyle='rgba(200,225,255,0.7)'; cx.lineWidth=1.5;
+    for(let i=0;i<120;i++){
+      const x=((i*173.7+t*200)%CW+CW)%CW;
+      const y=((i*97.3+t*400)%CH+CH)%CH;
+      const len=10+Math.sin(i*3.7)*5;
+      cx.globalAlpha=0.25+Math.sin(i*2.1)*0.15;
+      cx.beginPath();cx.moveTo(x,y);cx.lineTo(x-2,y+len);cx.stroke();
     }
-    // Blue tint overlay
-    cx.globalAlpha=0.07; cx.fillStyle='#5599cc'; cx.fillRect(0,0,CW,CH);
+    cx.globalAlpha=0.12; cx.fillStyle='#4488bb'; cx.fillRect(0,0,CW,CH);
     cx.restore();
 
-  } else if(w===2){ // DUST - warm haze overlay + slow screen blobs
-    // Just a warm color overlay that pulses slightly
+  } else if(w===2){ // DUST
     const pulse=0.5+Math.sin(t*0.8)*0.5;
-    cx.fillStyle=`rgba(180,140,60,${0.04+pulse*0.03})`; cx.fillRect(0,0,CW,CH);
-    // A few large soft blobs fixed on screen edges
+    cx.fillStyle=`rgba(190,150,60,${0.1+pulse*0.06})`; cx.fillRect(0,0,CW,CH);
+    // Dust streaks drifting right
     cx.save();
-    for(let i=0;i<8;i++){
-      const x=(i%4)*(CW/3)+Math.sin(t*0.3+i)*20;
-      const y=i<4?-30:CH+30;
-      const r=60+Math.sin(t*0.5+i*1.7)*20;
-      cx.globalAlpha=0.06+Math.sin(t*0.4+i)*0.03;
-      cx.fillStyle='rgba(210,170,90,1)';
-      cx.beginPath();cx.arc(x,y,r,0,Math.PI*2);cx.fill();
+    for(let i=0;i<20;i++){
+      const x=((i*137+t*30)%CW+CW)%CW;
+      const y=((i*79+t*5)%(CH*1.2)+CH*0.1)%CH;
+      cx.globalAlpha=0.12+Math.sin(i*1.7+t)*0.06;
+      cx.fillStyle='rgba(230,190,100,1)';
+      cx.beginPath();cx.ellipse(x,y,30+i%15,3,0,0,Math.PI*2);cx.fill();
     }
     cx.restore();
 
@@ -3102,7 +3095,6 @@ function loop(now){
     } else {
       // countdown / racing
       if(state==='countdown'){
-        drawCountdown(G, cdN, cdT);
         cdT+=dt;
         if(cdT>=1){ cdT=0; cdN--; beep(cdN>0?440*Math.pow(1.25,3-cdN):880,cdN>0?.15:.3); if(cdN<=0) state='racing'; }
       } else if(state==='racing'){
@@ -3164,9 +3156,8 @@ function loop(now){
       // minimap hidden in full-track view
       updateDrawWeather(G,dt,S.currentTrack||0);
       drawHUD(G, cars[0], cars, raceT);
+      if(state==='countdown') drawCountdown(G, cdN, cdT);
       drawCtrl(G, ctrlL, ctrlR, ctrlN, ctrlB, cars[0], raceT);
-
-      // countdown handled by drawCountdown in racing block above
     }
   } catch(err){
     console.error('Loop error:', err);
