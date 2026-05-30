@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260530.0243'; // auto-updated each build
+const BUILD = '20260530.0249'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -860,43 +860,29 @@ function updateDrawWeather(cx,dt,trackIdx){
   weatherT+=dt;
   const t=weatherT;
 
-  if(w===1){ // RAIN - fixed grid, only falls downward
-    cx.save();
-    cx.strokeStyle='rgba(200,225,255,0.65)'; cx.lineWidth=1.5;
-    const cols=14, rows=10;
-    const cw=CW/cols, ch=CH/rows;
-    for(let ci=0;ci<cols;ci++){
-      for(let ri=0;ri<rows;ri++){
-        // Fixed x per column, y scrolls downward only
-        const x=ci*cw+(ci*37.3)%cw;
-        const rawY=ri*ch+(ci*23.7)%(ch*0.5)+(t*220)%ch;
-        const y=((rawY)%CH+CH)%CH;
-        const len=10+Math.sin(ci*3.7+ri)*4;
-        cx.globalAlpha=0.2+Math.sin(ci*1.9+ri*2.3)*0.12;
-        cx.beginPath();cx.moveTo(x,y);cx.lineTo(x-1.5,y+len);cx.stroke();
-      }
-    }
-    cx.globalAlpha=0.1; cx.fillStyle='#3377aa'; cx.fillRect(0,0,CW,CH);
-    cx.restore();
+  if(w===1){ // RAIN - pure screen tint + subtle vignette, no moving parts
+    // Dark blue tint
+    cx.fillStyle='rgba(40,70,120,0.18)'; cx.fillRect(0,0,CW,CH);
+    // Edge darkening to simulate overcast
+    const rg=cx.createRadialGradient(CW/2,CH/2,CH*0.2,CW/2,CH/2,CH*0.9);
+    rg.addColorStop(0,'rgba(0,0,0,0)');
+    rg.addColorStop(1,'rgba(20,40,80,0.22)');
+    cx.fillStyle=rg; cx.fillRect(0,0,CW,CH);
+    // Subtle shimmer on top band (simulates wet reflection)
+    cx.fillStyle=`rgba(150,200,255,${0.04+Math.sin(t*1.2)*0.02})`; 
+    cx.fillRect(0,0,CW,CH*0.08);
 
-  } else if(w===2){ // DUST - fixed haze, no drift
-    const pulse=Math.sin(t*0.6)*0.5+0.5;
-    // Static tint that pulses
-    cx.fillStyle=`rgba(190,150,60,${0.09+pulse*0.05})`; cx.fillRect(0,0,CW,CH);
-    // Fixed horizontal smears at set Y positions (don't move)
-    cx.save();
-    for(let i=0;i<8;i++){
-      const y=(i/8)*CH+(Math.sin(i*2.3)*CH*0.05);
-      const w2=CW*(0.3+Math.sin(i*1.7)*0.2);
-      const x=CW*(0.1+Math.sin(i*3.1)*0.15);
-      cx.globalAlpha=0.08+Math.sin(t*0.5+i)*0.04;
-      cx.fillStyle='rgba(240,200,110,1)';
-      cx.beginPath();cx.ellipse(x+w2/2,y,w2/2,4+i%4,0,0,Math.PI*2);cx.fill();
-    }
-    cx.restore();
+  } else if(w===2){ // DUST - warm sandy tint
+    cx.fillStyle=`rgba(180,140,50,${0.12+Math.sin(t*0.7)*0.04})`; 
+    cx.fillRect(0,0,CW,CH);
+    // Warm edge vignette
+    const rg2=cx.createRadialGradient(CW/2,CH/2,CH*0.15,CW/2,CH/2,CH*0.85);
+    rg2.addColorStop(0,'rgba(0,0,0,0)');
+    rg2.addColorStop(1,'rgba(120,80,20,0.2)');
+    cx.fillStyle=rg2; cx.fillRect(0,0,CW,CH);
 
   } else if(w===3){ // OVERCAST
-    cx.fillStyle='rgba(60,60,80,0.08)'; cx.fillRect(0,0,CW,CH);
+    cx.fillStyle='rgba(40,40,60,0.12)'; cx.fillRect(0,0,CW,CH);
   }
 }
 
