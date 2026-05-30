@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.2355'; // auto-updated each build
+const BUILD = '20260531.0045'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2063,6 +2063,11 @@ function garageLayout(){
   return{cols,cW,cH,pad,startX:pad};
 }
 
+function _hex6(col){
+  // Expand 3-char hex (#abc) to 6-char (#aabbcc) so alpha-suffix concat works
+  if(col&&col[0]==='#'&&col.length===4) return '#'+col[1]+col[1]+col[2]+col[2]+col[3]+col[3];
+  return col||'#4477ff';
+}
 function drawGarage(cx){
   const cars2=CAR_DEFS;
   if(garageIdx<0) garageIdx=0;
@@ -2075,7 +2080,7 @@ function drawGarage(cx){
   // Background
   cx.fillStyle='#080810'; cx.fillRect(0,0,CW,CH);
   const bg=cx.createRadialGradient(CW*.25,CH*.5,0,CW*.25,CH*.5,CW*.5);
-  bg.addColorStop(0,selCol+'33'); bg.addColorStop(1,'transparent');
+  bg.addColorStop(0,_hex6(selCol)+'33'); bg.addColorStop(1,'transparent');
   cx.fillStyle=bg; cx.fillRect(0,0,CW,CH);
 
   // ── TOP BAR ───────────────────────────────────────────────────────────────
@@ -2139,7 +2144,7 @@ function drawGarage(cx){
     }
   } else {
     // Fallback: colored circle
-    cx.fillStyle=selCol+'55';
+    cx.fillStyle=_hex6(selCol)+'55';
     cx.beginPath();cx.arc(sprX+sprSize/2,sprY+sprSize/2,sprSize*.4,0,Math.PI*2);cx.fill();
     cx.fillStyle=isUnlocked?selCol:'rgba(255,255,255,.3)';
     cx.font=`${Math.round(sprSize*.35)}px monospace`; cx.textAlign='center'; cx.textBaseline='middle';
@@ -2284,9 +2289,13 @@ function drawStats(cx){
       const tidx=typeof r.track==='string'?parseInt(r.track.replace('track_','')):r.track;
       const _tn=ALL_TRACKS[tidx]?.name||('Track '+(tidx+1));
       const _t=r.time,_m=Math.floor(_t/60),_s=String(Math.floor(_t%60)).padStart(2,'0'),_ms=String(Math.floor((_t%1)*100)).padStart(2,'0');
-      const _pd=['🥇','🥈','🥉','4️⃣','5️⃣'][r.pos-1]||r.pos;
-      cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`${Math.round(CH*.028)}px monospace`;
-      cx.textAlign='left'; cx.fillText(`${_pd} ${_tn.substring(0,12)}`,col1,y);
+      const _posLabels=['1ST','2ND','3RD','4TH','5TH'];
+      const _pd=_posLabels[r.pos-1]||(r.pos+'TH');
+      const _pc=['#FFD700','#C0C0C0','#CD7F32','rgba(255,255,255,.5)','rgba(255,255,255,.4)'][r.pos-1]||'rgba(255,255,255,.4)';
+      cx.font=`bold ${Math.round(CH*.028)}px monospace`;
+      cx.fillStyle=_pc; cx.textAlign='left'; cx.fillText(_pd,col1,y);
+      cx.fillStyle='rgba(255,255,255,.75)'; cx.font=`${Math.round(CH*.028)}px monospace`;
+      cx.fillText(' '+_tn.substring(0,12),col1+CW*.09,y);
       cx.textAlign='right'; cx.fillText(`${_m}:${_s}.${_ms}`,CW*.92,y);
       y+=CH*.042;
     });
@@ -2335,6 +2344,11 @@ function drawStats(cx){
   }
 
   cx.restore();
+}
+
+function statsClick(mx,my){
+  const _bW=Math.max(110,CW*.16)+6, _bH=CH*.075+4;
+  if(mx<=_bW&&my<=_bH){ state='menu'; bgmMenu(); sfxBeep(300,.08); }
 }
 
 // ─── AUTH SCREEN ──────────────────────────────────────────────────────────────
@@ -3078,7 +3092,7 @@ C.addEventListener('click',e=>{
   initAudio();
   const p=touchXY(e);
   if(state==='auth')             authClick(p.x,p.y);
-  else if(state==='stats')      { if(p.y<CH*.12||p.x<CW*.15) state='settings'; }
+  else if(state==='stats')      { statsClick(p.x,p.y); }
   else if(state==='menu')        menuClick(p.x,p.y);
   else if(state==='garage')      garageClick(p.x,p.y);
   else if(state==='tracks')      trackSelectClick(p.x,p.y);
@@ -3259,7 +3273,7 @@ function loop(now){
       drawMenu(G);
 
     } else if(state==='achievements'){
-      drawAchievements(cx);
+      drawAchievements(G);
     } else if(state==='garage'){
       drawGarage(G);
       // Unlock flash overlay
