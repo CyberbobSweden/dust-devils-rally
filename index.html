@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.2025'; // auto-updated each build
+const BUILD = '20260530.2128'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2111,13 +2111,23 @@ function drawGarage(cx){
     img.src=CAR_SHEET_SRC; window._carSheetImg=img;
   }
   if(sheet&&sheet.complete&&sheet.naturalWidth&&spr){
-    // Sprite is 64×96 top-down, rotate -90° so car faces right in garage
-    const dW=Math.round(sprSize*.67), dH=Math.round(sprSize);
-    cx.save();
-    cx.translate(sprX+sprSize/2, sprY+sprSize/2);
-    cx.rotate(-Math.PI/2);
-    cx.drawImage(sheet,spr.sx,spr.sy,spr.sw,spr.sh,-dH/2,-dW/2,dH,dW);
-    cx.restore();
+    // Sprite 64×96 top-down — maintain aspect ratio, center in panel
+    const aspect=spr.sw/spr.sh; // ~0.667
+    const dH=Math.round(sprSize), dW=Math.round(sprSize*aspect);
+    const dx=sprX+(sprSize-dW)/2, dy=sprY;
+    cx.drawImage(sheet,spr.sx,spr.sy,spr.sw,spr.sh,dx,dy,dW,dH);
+    // Color tint: draw chosen color over car using source-atop
+    const carColor=(S.carColors&&S.carColors[sel.id])||null;
+    if(carColor&&carColor!==sel.col){
+      cx.save();
+      // Create clipping region = sprite bounds
+      cx.beginPath(); cx.rect(dx,dy,dW,dH); cx.clip();
+      cx.globalCompositeOperation='source-atop';
+      cx.globalAlpha=0.45;
+      cx.fillStyle=carColor;
+      cx.fillRect(dx,dy,dW,dH);
+      cx.restore();
+    }
     if(!isUnlocked){
       cx.fillStyle='rgba(0,0,0,.65)';
       cx.beginPath();cx.arc(sprX+sprSize/2,sprY+sprSize/2,sprSize*.45,0,Math.PI*2);cx.fill();
