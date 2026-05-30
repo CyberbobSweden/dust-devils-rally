@@ -83,7 +83,7 @@ canvas { display: block; }
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.1121'; // auto-updated each build
+const BUILD = '20260530.1128'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2883,15 +2883,18 @@ function leaderboardClick(mx,my){
   if((my>CH*.84)||(my<CH*.12&&mx<CW*.15)){
     state='menu'; sfxBeep(300,.08); return;
   }
-  // Track tabs at top
-  const tabW=Math.min(CW*.18,110), tabH=CH*.065, tabY=CH*.12;
-  if(my>=tabY&&my<=tabY+tabH){
-    const unlockedTr=S.unlockedTracks||[0];
-    const ti=Math.floor(mx/tabW);
-    if(ti>=0&&ti<unlockedTr.length){
-      lbTrack=unlockedTr[ti]; loadLbScores(); sfxBeep(440,.06);
+  // Track tab clicks
+  const _unl=S.unlockedTracks||[0];
+  const _tabsPerRow=Math.min(_unl.length, Math.floor(CW/(Math.round(CW/6))));
+  const _tabW=Math.floor((CW-3*(_tabsPerRow-1))/_tabsPerRow);
+  const _tabH=Math.round(CH*.058);
+  _unl.forEach((ti,i)=>{
+    const row=Math.floor(i/_tabsPerRow), col=i%_tabsPerRow;
+    const tx=col*(_tabW+3), ty=CH*.11+row*(_tabH+3);
+    if(mx>=tx&&mx<=tx+_tabW&&my>=ty&&my<=ty+_tabH){
+      lbTrack=ti; loadLbScores(); sfxBeep(440,.06);
     }
-  }
+  });
 }
 
 // ─── RESULTS ─────────────────────────────────────────────────────────────────
