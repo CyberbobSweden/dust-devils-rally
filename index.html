@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2219'; // auto-updated each build
+const BUILD = '20260529.2224'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -98,7 +98,7 @@ const LAPS = 3;
 
 // ─── CAR DEFINITIONS ─────────────────────────────────────────────────────────
 const CAR_DEFS = [
-  { id:'banger', name:'BANGER',      price:0,    col:'#4477ff', col2:'#1a3a88',
+  { id:'banger',aiName:'MAVERICK', name:'BANGER',      price:0,    col:'#4477ff', col2:'#1a3a88',
     grip:.88, top:259, acc:217, nos:1.0, body:'std',
     desc:'Free starter. Solid all-rounder.' },
   { id:'turbo',  name:'TURBO HATCH', price:500,  col:'#ff3322', col2:'#881100',
@@ -878,23 +878,31 @@ function updateDrawWeather(cx,dt,trackIdx){
     // Rain overlay tint
     cx.fillStyle='rgba(100,130,180,0.1)'; cx.fillRect(0,0,CW,CH);
 
-  } else if(w===2){ // DUST/SAND
-    while(weatherParticles.length<60){
+  } else if(w===2){ // DUST/SAND - white horizontal streaks
+    while(weatherParticles.length<80){
       weatherParticles.push({
         x:Math.random()*CW, y:Math.random()*CH,
-        vx:Math.random()*80+40, vy:(Math.random()-0.5)*20,
-        r:Math.random()*3+1, alpha:Math.random()*0.3+0.1
+        vx:Math.random()*180+80, vy:(Math.random()-0.5)*15,
+        len:Math.random()*30+10,
+        alpha:Math.random()*0.45+0.2,
+        r:Math.random()*1.5+0.5
       });
     }
+    cx.save();
     weatherParticles.forEach(d=>{
       d.x+=d.vx*dt; d.y+=d.vy*dt;
-      if(d.x>CW+10){ d.x=-10; d.y=Math.random()*CH; }
+      if(d.x>CW+d.len){ d.x=-d.len; d.y=Math.random()*CH; }
+      cx.globalAlpha=d.alpha;
+      cx.strokeStyle='rgba(255,240,210,0.9)';
+      cx.lineWidth=d.r;
       cx.beginPath();
-      cx.arc(d.x,d.y,d.r,0,Math.PI*2);
-      cx.fillStyle=`rgba(220,170,90,${Math.min(0.5,d.alpha*2)})`;
-      cx.fill();
+      cx.moveTo(d.x,d.y);
+      cx.lineTo(d.x-d.len,d.y+d.vy*0.1);
+      cx.stroke();
     });
-    cx.fillStyle='rgba(180,140,80,0.04)'; cx.fillRect(0,0,CW,CH);
+    cx.restore();
+    // Haze overlay
+    cx.fillStyle='rgba(200,160,80,0.07)'; cx.fillRect(0,0,CW,CH);
 
   } else if(w===3){ // OVERCAST
     cx.fillStyle='rgba(60,60,80,0.08)'; cx.fillRect(0,0,CW,CH);
@@ -2998,6 +3006,15 @@ function finishRace(){ spawnConfetti();
     setTimeout(()=>{ beep(554,.1); setTimeout(()=>beep(659,.1),120); setTimeout(()=>beep(880,.25),240); },300);
   }
 
+  // Store full race results for results screen
+  window._raceResults=sorted.map((car,i)=>({
+    pos:i+1,
+    name:car.isP?(S.name||'YOU'):car.def.aiName||car.def.name,
+    time:raceT+(i*0.8), // approximate AI times
+    car:car.def.id,
+    isPlayer:car.isP
+  }));
+  window._raceResults[0].time=raceT; // player's exact time
   const entry={name:S.name||'ANON',time:raceT,pos,car:S.selected,track:tid};
   S.scores.push(entry); S.scores.sort((a,b)=>a.time-b.time); S.scores=S.scores.slice(0,10);
   doSave(); fbSave(entry);
