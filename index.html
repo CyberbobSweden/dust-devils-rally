@@ -83,7 +83,7 @@ canvas { display: block; }
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.1113'; // auto-updated each build
+const BUILD = '20260530.1121'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -513,7 +513,7 @@ let S = {
   pid: Math.random().toString(36).slice(2,10), // unique device ID, generated once
   upgrades: {}, // {carId: {engine:0, grip:0, nos:0}}
   carColors: {}, // {carId: '#hexcolor'}
-  totalRaces:0, totalWins:0, totalCoinsEarned:0, totalDriftTime:0
+  totalRaces:0, totalWins:0, totalCoinsEarned:0, totalDriftTime:0, winStreak:0, bestStreak:0
 };
 
 function loadSave() {
@@ -2587,6 +2587,7 @@ function drawStats(cx){
     ['Total Earnings', '$'+(S.totalCoinsEarned||0)],
     ['Current Coins', '$'+(S.coins||0)],
     ['Drift Time', Math.round((S.totalDriftTime||0))+'s'],
+    ['Win Streak', (S.winStreak||0)+' (best: '+(S.bestStreak||0)+')'],
     ['Cars Unlocked', (S.unlocked||['banger']).length+'/'+CAR_DEFS.length],
     ['Tracks Unlocked', (S.unlockedTracks||[0]).length+'/'+ALL_TRACKS.length],
   ];
@@ -2843,7 +2844,7 @@ function drawLeaderboard(cx){
   });
 
   // Scores for selected track
-  const tid='track_'+lbTrack;
+  const tid=typeof lbTrack==='number'?lbTrack:parseInt(lbTrack)||0;
   const allScores=window._lbScores||{};
   const scores=allScores[tid]||[];
   const rowH=CH*.075, startY=CH*.22;
@@ -2943,6 +2944,16 @@ function drawResults(cx,cam,SC){
     ty+=rowH;
   });
 
+  // ── Win streak badge ──────────────────────────────────────────────────────────
+  if((S.winStreak||0)>=2&&_res.length&&_res[0]&&_res[0].isPlayer){
+    cx.save();
+    cx.font=`bold ${Math.round(CH*.028)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillStyle='#ff6600';
+    cx.fillText('🔥 '+S.winStreak+' RACE WIN STREAK!',CW/2,ty+CH*.022);
+    cx.restore();
+    ty+=CH*.048;
+  }
   // ── Stacked info below table ───────────────────────────────────────────────
   let iy=ty+CH*.018;
 
@@ -2969,7 +2980,7 @@ function drawResults(cx,cam,SC){
   }
 
   // Coins + bonuses
-  iy=Math.max(iy, ty+CH*.018)+CH*.008;
+  iy+=CH*.016; // always gap before coins
   cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.038)}px monospace`;
   cx.textAlign='center'; cx.textBaseline='middle';
   cx.fillText('+ $'+resCoins,CW/2,iy);
@@ -3214,7 +3225,13 @@ function finishRace(){ spawnConfetti();
   S.raceHistory.unshift({pos,time:raceT,track:tid,car:S.selected,date:Date.now()});
   S.raceHistory=S.raceHistory.slice(0,10);
   S.totalRaces=(S.totalRaces||0)+1;
-  if(pos===1) S.totalWins=(S.totalWins||0)+1;
+  if(pos===1){
+    S.totalWins=(S.totalWins||0)+1;
+    S.winStreak=(S.winStreak||0)+1;
+    S.bestStreak=Math.max(S.bestStreak||0,S.winStreak);
+  } else {
+    S.winStreak=0;
+  }
   S.totalDriftTime=(S.totalDriftTime||0)+_driftTime;
   const entry={name:S.name||'ANON',time:raceT,pos,car:S.selected,track:tid};
   S.scores.push(entry); S.scores.sort((a,b)=>a.time-b.time); S.scores=S.scores.slice(0,10);
@@ -3397,6 +3414,14 @@ function loop(now){
         G.textAlign='center'; G.textBaseline='middle';
         G.fillStyle='rgba(0,0,0,.4)'; G.fillText('👻 '+_gdTxt,CW/2+1,CH*.085+1);
         G.fillStyle=_gdCol; G.fillText('👻 '+_gdTxt,CW/2,CH*.085);
+        G.restore();
+      }
+      // Win streak display
+      if((S.winStreak||0)>=2&&state==='racing'){
+        G.save(); G.font=`bold ${Math.round(CH*.032)}px monospace`;
+        G.textAlign='left'; G.textBaseline='middle';
+        G.fillStyle='rgba(0,0,0,.4)'; G.fillText('🔥 '+S.winStreak+' WIN STREAK',CW*.04+1,CH*.16+1);
+        G.fillStyle='#ff6600'; G.fillText('🔥 '+S.winStreak+' WIN STREAK',CW*.04,CH*.16);
         G.restore();
       }
       // Drift combo display
