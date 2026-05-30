@@ -83,7 +83,7 @@ canvas { display: block; }
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.1102'; // auto-updated each build
+const BUILD = '20260530.1109'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2898,9 +2898,8 @@ let resCoins=0,resReasons=[];
 
 function drawResults(cx,cam,SC){
   drawTrack(cx,cam,SC); drawVignette(cx);
-  cx.fillStyle='rgba(0,0,0,.85)'; cx.fillRect(0,0,CW,CH);
+  cx.fillStyle='rgba(0,0,0,.87)'; cx.fillRect(0,0,CW,CH);
 
-  // Header: position + trophy
   const posStr=resReasons[0]||'';
   const pos=Math.max(1,parseInt(posStr)||1);
   const posColors=['#FFD700','#C0C0C0','#CD7F32','#aaa','#888'];
@@ -2908,98 +2907,88 @@ function drawResults(cx,cam,SC){
   const trophies=['🏆','🥈','🥉','',''];
 
   cx.textAlign='center'; cx.textBaseline='middle';
+
+  // Trophy + position (compact top)
   if(trophies[pos-1]){
-    cx.font=`${Math.round(CH*.07)}px monospace`;
-    cx.fillText(trophies[pos-1],CW/2,CH*.09);
+    cx.font=`${Math.round(CH*.055)}px monospace`;
+    cx.fillText(trophies[pos-1],CW/2,CH*.07);
   }
   cx.fillStyle=posColors[pos-1]||'#aaa';
-  cx.font=`bold ${Math.round(CH*.11)}px monospace`;
-  cx.fillText(posLabels[pos-1]||'',CW/2,CH*.19);
-
-  // Time
+  cx.font=`bold ${Math.round(CH*.09)}px monospace`;
+  cx.fillText(posLabels[pos-1]||'',CW/2,CH*.155);
   const timeStr=(posStr.split('–')[1]||'').trim();
-  cx.fillStyle='rgba(255,255,255,.85)'; cx.font=`bold ${Math.round(CH*.042)}px monospace`;
-  cx.fillText(timeStr,CW/2,CH*.275);
+  cx.fillStyle='rgba(255,255,255,.85)'; cx.font=`bold ${Math.round(CH*.036)}px monospace`;
+  cx.fillText(timeStr,CW/2,CH*.22);
 
-  // ── Results table ─────────────────────────────────────────────────────────
+  // ── Results table ──────────────────────────────────────────────────────────
   const _res=window._raceResults||[];
-  const rowH=CH*.065, tW=CW*.78, tX=CW/2-tW/2;
-  let ty=CH*.315;
-  if(_res.length>0){
-    _res.forEach((r,i)=>{
-      cx.fillStyle=r.isPlayer?'rgba(240,165,0,0.18)':'rgba(255,255,255,0.05)';
-      cx.beginPath();cx.roundRect(tX,ty,tW,rowH-3,5);cx.fill();
-      if(r.isPlayer){cx.strokeStyle='rgba(240,165,0,.5)';cx.lineWidth=1.5;cx.beginPath();cx.roundRect(tX,ty,tW,rowH-3,5);cx.stroke();}
-      // Position
-      cx.fillStyle=posColors[i]||'#666'; cx.font=`bold ${Math.round(rowH*.48)}px monospace`;
-      cx.textAlign='left'; cx.textBaseline='middle';
-      cx.fillText(posLabels[i]||`${i+1}`,tX+8,ty+rowH*.48);
-      // Name
-      cx.fillStyle=r.isPlayer?'#fff':'rgba(255,255,255,.75)';
-      cx.font=`${r.isPlayer?'bold ':''}${Math.round(rowH*.43)}px monospace`;
-      cx.fillText((r.name||'???').substring(0,12),tX+tW*.2,ty+rowH*.48);
-      // Time for all cars
-      if(r.time){
-        const t=r.time,m=Math.floor(t/60),s=String(Math.floor(t%60)).padStart(2,'0'),ms=String(Math.floor((t%1)*100)).padStart(2,'0');
-        cx.fillStyle=r.isPlayer?'rgba(255,255,255,.85)':'rgba(255,255,255,.45)';
-        cx.textAlign='right';
-        cx.font=`${Math.round(rowH*.38)}px monospace`;
-        cx.fillText(m+':'+s+'.'+ms,tX+tW-8,ty+rowH*.48);
-      }
-      ty+=rowH;
-    });
-  } else {
-    // Fallback: just show coins
-    cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.05)}px monospace`;
-    cx.textAlign='center';
-    cx.fillText('+ $'+resCoins,CW/2,CH*.5);
+  const rowH=CH*.062, tW=CW*.82, tX=CW/2-tW/2;
+  let ty=CH*.265;
+  _res.forEach((r,i)=>{
+    cx.fillStyle=r.isPlayer?'rgba(240,165,0,.18)':'rgba(255,255,255,.05)';
+    cx.beginPath();cx.roundRect(tX,ty,tW,rowH-3,4);cx.fill();
+    if(r.isPlayer){cx.strokeStyle='rgba(240,165,0,.45)';cx.lineWidth=1.5;cx.beginPath();cx.roundRect(tX,ty,tW,rowH-3,4);cx.stroke();}
+    cx.fillStyle=posColors[i]||'#666'; cx.font=`bold ${Math.round(rowH*.48)}px monospace`;
+    cx.textAlign='left'; cx.textBaseline='middle';
+    cx.fillText(posLabels[i]||'',tX+7,ty+rowH*.48);
+    cx.fillStyle=r.isPlayer?'#fff':'rgba(255,255,255,.75)';
+    cx.font=`${r.isPlayer?'bold ':' '}${Math.round(rowH*.42)}px monospace`;
+    cx.fillText((r.name||'???').substring(0,12),tX+tW*.18,ty+rowH*.48);
+    if(r.time){
+      const t=r.time,m=Math.floor(t/60),s=String(Math.floor(t%60)).padStart(2,'0'),ms=String(Math.floor((t%1)*100)).padStart(2,'0');
+      cx.fillStyle=r.isPlayer?'rgba(255,255,255,.9)':'rgba(255,255,255,.45)';
+      cx.textAlign='right'; cx.font=`${Math.round(rowH*.38)}px monospace`;
+      cx.fillText(m+':'+s+'.'+ms,tX+tW-7,ty+rowH*.48);
+    }
+    ty+=rowH;
+  });
+
+  // ── Stacked info below table ───────────────────────────────────────────────
+  let iy=ty+CH*.018;
+
+  // Achievement row
+  const _ach=window._pendingAch||[];
+  if(_ach.length&&iy<CH*.76){
+    cx.fillStyle='rgba(255,215,0,.12)'; cx.strokeStyle='rgba(255,215,0,.4)'; cx.lineWidth=1;
+    cx.beginPath();cx.roundRect(tX,iy,tW,CH*.045,6);cx.fill();cx.stroke();
+    cx.fillStyle='#ffd700'; cx.font=`bold ${Math.round(CH*.022)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText('🏅 '+_ach.map(a=>a.icon+' '+a.name).join('  '),CW/2,iy+CH*.0225);
+    iy+=CH*.052;
   }
 
-  // Achievement toast
-  const _ach=window._pendingAch||[];
-  if(_ach.length){
-    cx.save();
-    cx.fillStyle='rgba(255,180,0,.12)'; cx.strokeStyle='rgba(255,180,0,.5)'; cx.lineWidth=1.5;
-    cx.beginPath();cx.roundRect(CW*.08,CH*.63,CW*.84,CH*.05,8);cx.fill();cx.stroke();
-    cx.fillStyle='#ffdd00'; cx.font=`bold ${Math.round(CH*.024)}px monospace`;
-    cx.textAlign='center'; cx.textBaseline='middle';
-    cx.fillText('🏅 ACHIEVEMENT: '+_ach.map(a=>a.icon+' '+a.name).join('  '),CW/2,CH*.655);
-    cx.restore();
-  }
-  // Clear pending achievement after display
-  if(window._pendingAch&&window._pendingAch.length) setTimeout(()=>{window._pendingAch=[];},5000);
-  // Challenge completion toast
+  // Daily challenges row
   const _doneC=(S.challenges||[]).filter(c=>c.done);
-  if(_doneC.length&&window._raceResults){
-    cx.save();
-    cx.fillStyle='rgba(46,204,113,.15)'; cx.strokeStyle='rgba(46,204,113,.5)'; cx.lineWidth=1.5;
-    cx.beginPath();cx.roundRect(CW*.1,CH*.685,CW*.8,CH*.06,8);cx.fill();cx.stroke();
-    cx.fillStyle='#2ecc71'; cx.font=`bold ${Math.round(CH*.026)}px monospace`;
+  if(_doneC.length&&iy<CH*.78){
+    cx.fillStyle='rgba(46,204,113,.12)'; cx.strokeStyle='rgba(46,204,113,.35)'; cx.lineWidth=1;
+    cx.beginPath();cx.roundRect(tX,iy,tW,CH*.045,6);cx.fill();cx.stroke();
+    cx.fillStyle='#2ecc71'; cx.font=`bold ${Math.round(CH*.021)}px monospace`;
     cx.textAlign='center'; cx.textBaseline='middle';
-    const _completed=_doneC.map(c=>'✓ '+c.desc).join('  ');
-    cx.fillText('🎯 '+_completed,CW/2,CH*.715);
-    cx.restore();
+    cx.fillText('🎯 '+_doneC.map(c=>'✓ '+c.desc).join('  '),CW/2,iy+CH*.0225);
+    iy+=CH*.052;
   }
+
   // Coins + bonuses
-  const bonusY=Math.min(ty+CH*.02, CH*.70);
-  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.04)}px monospace`;
+  iy=Math.max(iy, ty+CH*.018);
+  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.038)}px monospace`;
   cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText('+ $'+resCoins,CW/2,bonusY);
-  cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`${Math.round(CH*.026)}px monospace`;
-  resReasons.slice(1).forEach((r,i)=>{
-    if(bonusY+CH*.052+i*CH*.032<CH*.83) cx.fillText(r,CW/2,bonusY+CH*.052+i*CH*.032);
+  cx.fillText('+ $'+resCoins,CW/2,iy);
+  iy+=CH*.042;
+  cx.fillStyle='rgba(255,255,255,.55)'; cx.font=`${Math.round(CH*.022)}px monospace`;
+  resReasons.slice(1).forEach(r=>{
+    if(iy<CH*.85){ cx.fillText(r,CW/2,iy); iy+=CH*.03; }
   });
 
   // Buttons
-  const bW=CW*.40, bH=CH*.10, bY=CH*.875, gap=CW*.04;
+  const bW=CW*.38, bH=CH*.1, bY=CH*.88, gap=CW*.04;
   cx.fillStyle='#f0a500';
   cx.beginPath();cx.roundRect(CW/2-bW-gap/2,bY,bW,bH,10);cx.fill();
-  cx.fillStyle='#000'; cx.font=`bold ${Math.round(bH*.38)}px monospace`;
+  cx.fillStyle='#000'; cx.font=`bold ${Math.round(bH*.35)}px monospace`;
   cx.textAlign='center'; cx.textBaseline='middle';
   cx.fillText('▶ RACE AGAIN',CW/2-bW/2-gap/2,bY+bH/2);
   cx.fillStyle='rgba(255,255,255,.15)'; cx.strokeStyle='rgba(255,255,255,.4)'; cx.lineWidth=2;
   cx.beginPath();cx.roundRect(CW/2+gap/2,bY,bW,bH,10);cx.fill();cx.stroke();
-  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(bH*.38)}px monospace`;
+  cx.fillStyle='#fff';
   cx.fillText('⌂ MENU',CW/2+bW/2+gap/2,bY+bH/2);
 }
 
