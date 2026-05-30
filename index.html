@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260531.0100'; // auto-updated each build
+const BUILD = '20260531.0120'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2121,18 +2121,19 @@ function drawGarage(cx){
     const aspect=spr.sw/spr.sh; // ~0.667
     const dH=Math.round(sprSize), dW=Math.round(sprSize*aspect);
     const dx=sprX+(sprSize-dW)/2, dy=sprY;
-    cx.drawImage(sheet,spr.sx,spr.sy,spr.sw,spr.sh,dx,dy,dW,dH);
-    // Color tint: draw chosen color over car using source-atop
+    // Draw car with color tint using offscreen canvas (no bg bleed)
     const carColor=(S.carColors&&S.carColors[sel.id])||null;
-    if(carColor&&carColor!==sel.col){
-      cx.save();
-      // Create clipping region = sprite bounds
-      cx.beginPath(); cx.rect(dx,dy,dW,dH); cx.clip();
-      cx.globalCompositeOperation='source-atop';
-      cx.globalAlpha=0.45;
-      cx.fillStyle=carColor;
-      cx.fillRect(dx,dy,dW,dH);
-      cx.restore();
+    if(carColor){
+      const oc=document.createElement('canvas'); oc.width=dW; oc.height=dH;
+      const ox=oc.getContext('2d');
+      ox.drawImage(sheet,spr.sx,spr.sy,spr.sw,spr.sh,0,0,dW,dH);
+      ox.globalCompositeOperation='source-atop';
+      ox.globalAlpha=0.5;
+      ox.fillStyle=carColor;
+      ox.fillRect(0,0,dW,dH);
+      cx.drawImage(oc,dx,dy);
+    } else {
+      cx.drawImage(sheet,spr.sx,spr.sy,spr.sw,spr.sh,dx,dy,dW,dH);
     }
     if(!isUnlocked){
       cx.fillStyle='rgba(0,0,0,.65)';
@@ -2237,87 +2238,102 @@ function drawGarage(cx){
 function drawStats(cx){
   cx.save();
   cx.fillStyle='#0a0a14'; cx.fillRect(0,0,CW,CH);
+  // Scrollable stats — use scroll.stats offset
+  if(!scroll.stats) scroll.stats=0;
+  const _sOff=scroll.stats;
+  const col1=CW*.06, rowH=Math.round(CH*.1); // bigger rows for mobile
+  let y=CH*.13-_sOff;
 
-  // Header
-  cx.fillStyle='#2ecc71'; cx.font=`bold ${Math.round(CH*.055)}px monospace`;
-  cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText('📊 MY STATS',CW/2,CH*.07);
-  cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.25)'; cx.lineWidth=1.5;
-  cx.beginPath();cx.roundRect(6,4,Math.max(110,CW*.16),CH*.075,8);cx.fill();cx.stroke();
-  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.032)}px monospace`;
-  cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText('◀ BACK',6+Math.max(110,CW*.16)/2,4+CH*.0375);
-
-  const col1=CW*.08, col2=CW*.55, rowH=CH*.072;
-  let y=CH*.15;
-
-  // Career stats
+  // Career stats with trophy icons
   const stats=[
-    ['Races Played', S.totalRaces||0],
-    ['Wins', S.totalWins||0],
-    ['Win Rate', S.totalRaces>0?Math.round((S.totalWins||0)/(S.totalRaces)*100)+'%':'—'],
-    ['Total Earnings', '$'+(S.totalCoinsEarned||0)],
-    ['Current Coins', '$'+(S.coins||0)],
-    ['Drift Time', Math.round((S.totalDriftTime||0))+'s'],
-    ['Win Streak', (S.winStreak||0)+' (best: '+(S.bestStreak||0)+')'],
-    ['Cars Unlocked', (S.unlocked||['banger']).length+'/'+CAR_DEFS.length],
-    ['Tracks Unlocked', (S.unlockedTracks||[0]).length+'/'+ALL_TRACKS.length],
+    ['🏁','Races Played', S.totalRaces||0],
+    ['🏆','Wins', S.totalWins||0],
+    ['📈','Win Rate', S.totalRaces>0?Math.round((S.totalWins||0)/(S.totalRaces)*100)+'%':'—'],
+    ['💰','Total Earnings', '$'+(S.totalCoinsEarned||0)],
+    ['🪙','Current Coins', '$'+(S.coins||0)],
+    ['🌀','Drift Time', Math.round((S.totalDriftTime||0))+'s'],
+    ['🔥','Win Streak', (S.winStreak||0)+' (best: '+(S.bestStreak||0)+')'],
+    ['🚗','Cars Unlocked', (S.unlocked||['banger']).length+'/'+CAR_DEFS.length],
+    ['🗺','Tracks Unlocked', (S.unlockedTracks||[0]).length+'/'+ALL_TRACKS.length],
   ];
 
   stats.forEach((s,i)=>{
     const ry=y+i*rowH;
-    cx.fillStyle=i%2===0?'rgba(255,255,255,.04)':'rgba(0,0,0,0)';
-    cx.fillRect(CW*.05,ry-rowH*.4,CW*.9,rowH*.8);
-    cx.fillStyle='rgba(255,255,255,.6)'; cx.font=`${Math.round(rowH*.42)}px monospace`;
-    cx.textAlign='left'; cx.textBaseline='middle';
-    cx.fillText(s[0],col1,ry);
-    cx.fillStyle='#fff'; cx.font=`bold ${Math.round(rowH*.44)}px monospace`;
+    if(ry<CH*.1||ry>CH) return;
+    cx.fillStyle=i%2===0?'rgba(255,255,255,.05)':'rgba(0,0,0,0)';
+    cx.fillRect(0,ry-rowH*.45,CW,rowH*.9);
+    cx.font=`${Math.round(rowH*.5)}px monospace`; cx.textBaseline='middle';
+    cx.textAlign='left'; cx.fillStyle='rgba(255,255,255,.5)';
+    cx.fillText(s[0],CW*.03,ry);
+    cx.fillStyle='rgba(255,255,255,.75)';
+    cx.font=`${Math.round(rowH*.42)}px monospace`;
+    cx.fillText(s[1],CW*.12,ry);
+    cx.fillStyle='#fff'; cx.font=`bold ${Math.round(rowH*.46)}px monospace`;
     cx.textAlign='right';
-    cx.fillText(String(s[1]),CW*.92,ry);
+    cx.fillText(String(s[2]),CW*.97,ry);
   });
 
   // Recent races
   const _hist=S.raceHistory||[];
   if(_hist.length){
-    y+=stats.length*rowH+CH*.025;
-    cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.03)}px monospace`;
-    cx.textAlign='center'; cx.fillText('RECENT RACES',CW/2,y);
-    y+=CH*.04;
-    _hist.slice(0,5).forEach((r,i)=>{
+    y+=stats.length*rowH+rowH*.4;
+    if(y>CH*.1&&y<CH+50){
+      cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(rowH*.5)}px monospace`;
+      cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('RECENT RACES',CW/2,y);
+    }
+    y+=rowH*.7;
+    _hist.slice(0,8).forEach((r,i)=>{
+      if(y<CH*.1||y>CH+20){ y+=rowH*.85; return; }
       const tidx=typeof r.track==='string'?parseInt(r.track.replace('track_','')):r.track;
       const _tn=ALL_TRACKS[tidx]?.name||('Track '+(tidx+1));
       const _t=r.time,_m=Math.floor(_t/60),_s=String(Math.floor(_t%60)).padStart(2,'0'),_ms=String(Math.floor((_t%1)*100)).padStart(2,'0');
-      const _posLabels=['1ST','2ND','3RD','4TH','5TH'];
-      const _pd=_posLabels[r.pos-1]||(r.pos+'TH');
+      const _medals=['🥇','🥈','🥉','4️⃣','5️⃣'];
+      const _medal=_medals[r.pos-1]||r.pos+'TH';
       const _pc=['#FFD700','#C0C0C0','#CD7F32','rgba(255,255,255,.5)','rgba(255,255,255,.4)'][r.pos-1]||'rgba(255,255,255,.4)';
-      cx.font=`bold ${Math.round(CH*.028)}px monospace`;
-      cx.fillStyle=_pc; cx.textAlign='left'; cx.fillText(_pd,col1,y);
-      cx.fillStyle='rgba(255,255,255,.75)'; cx.font=`${Math.round(CH*.028)}px monospace`;
-      cx.fillText(' '+_tn.substring(0,12),col1+CW*.09,y);
-      cx.textAlign='right'; cx.fillText(`${_m}:${_s}.${_ms}`,CW*.92,y);
-      y+=CH*.042;
+      cx.font=`${Math.round(rowH*.52)}px monospace`; cx.textAlign='left'; cx.textBaseline='middle';
+      cx.fillText(_medal,col1,y);
+      cx.fillStyle='rgba(255,255,255,.8)'; cx.font=`${Math.round(rowH*.42)}px monospace`;
+      cx.fillText(_tn.substring(0,14),CW*.14,y);
+      cx.fillStyle='#ffdd33'; cx.textAlign='right'; cx.font=`bold ${Math.round(rowH*.42)}px monospace`;
+      cx.fillText(`${_m}:${_s}.${_ms}`,CW*.97,y);
+      y+=rowH*.85;
     });
   }
 
   // Best times section
-  y+=CH*.025;
-  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.035)}px monospace`;
-  cx.textAlign='center';
-  cx.fillText('BEST TIMES',CW/2,y);
-  y+=CH*.05;
+  y+=rowH*.3;
+  if(y>CH*.1&&y<CH+50){
+    cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(rowH*.5)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText('⏱ BEST TIMES',CW/2,y);
+  }
+  y+=rowH*.7;
 
   const times=S.bestTimes||{};
   ALL_TRACKS.forEach((tr,i)=>{
     if(!(S.unlockedTracks||[0]).includes(i)) return;
-    const t=times[i];
-    if(!t) return;
-    const m=Math.floor(t/60),s2=String(Math.floor(t%60)).padStart(2,'0'),ms=String(Math.floor((t%1)*100)).padStart(2,'0');
-    cx.fillStyle='rgba(255,255,255,.7)'; cx.font=`${Math.round(CH*.032)}px monospace`;
-    cx.textAlign='left'; cx.fillText(tr.name,col1,y);
-    cx.fillStyle='#ffdd33'; cx.textAlign='right';
-    cx.fillText(m+':'+s2+'.'+ms,CW*.92,y);
-    y+=CH*.05;
+    const t=times[i]; if(!t) return;
+    if(y>CH*.1&&y<CH+20){
+      const m=Math.floor(t/60),s2=String(Math.floor(t%60)).padStart(2,'0'),ms=String(Math.floor((t%1)*100)).padStart(2,'0');
+      cx.fillStyle='rgba(255,255,255,.75)'; cx.font=`${Math.round(rowH*.42)}px monospace`;
+      cx.textAlign='left'; cx.textBaseline='middle'; cx.fillText('🏁 '+tr.name,col1,y);
+      cx.fillStyle='#ffdd33'; cx.textAlign='right';
+      cx.fillText(m+':'+s2+'.'+ms,CW*.97,y);
+    }
+    y+=rowH*.8;
   });
+
+  // Fixed header overlay — always on top
+  cx.fillStyle='#0a0a14'; cx.fillRect(0,0,CW,CH*.12);
+  cx.fillStyle='#2ecc71'; cx.font=`bold ${Math.round(CH*.055)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('📊 MY STATS',CW/2,CH*.065);
+  const _bW=Math.max(120,CW*.22), _bH=CH*.075;
+  cx.fillStyle='rgba(255,255,255,.15)'; cx.strokeStyle='rgba(255,255,255,.35)'; cx.lineWidth=1.5;
+  cx.beginPath();cx.roundRect(6,4,_bW,_bH,8);cx.fill();cx.stroke();
+  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.038)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('◀ BACK',6+_bW/2,4+_bH/2);
 
   // ── Achievements ──────────────────────────────────────────────────────────
   if(y<CH*.82){
@@ -3061,6 +3077,7 @@ C.addEventListener('touchstart',e=>{
   const t=e.changedTouches[0]; const p=touchXY(t);
   if(state==='garage') scrollTouchStart('garage',p.y);
   else if(state==='tracks') scrollTouchStart('tracks',p.y);
+  else if(state==='stats') scrollTouchStart('stats',p.y);
   if(state==='racing'||state==='countdown') raceClick(p.x,p.y);
   if(state==='auth')        authClick(p.x,p.y);
   else if(state==='menu')   menuClick(p.x,p.y);
@@ -3116,7 +3133,7 @@ document.addEventListener('keydown',e=>{
       else { state='leaderboard'; lbTab=0; if(!scoresLoading&&(!globalScores||scoresError))fbLoad(); }
     }
   }
-  if(['garage','tracks','leaderboard','settings','stats','achievements'].includes(state)&&(e.key==='Escape'||e.key==='Backspace')){ state=state==='stats'?'settings':'menu'; if(state==='menu') bgmMenu(); }
+  if(['garage','tracks','leaderboard','settings','stats','achievements'].includes(state)&&(e.key==='Escape'||e.key==='Backspace')){ 'menu'; if(state==='menu') bgmMenu(); }
   if((state==='racing'||state==='countdown')&&e.key==='Escape'){ stopEngine(); setScreech(false); state='menu'; bgmMenu(); }
   if(state==='results'){ if(e.key==='Enter') startRace(); if(e.key==='Escape'){ state='menu'; bgmMenu(); } }
 });
