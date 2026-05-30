@@ -83,7 +83,7 @@ canvas { display: block; }
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.1052'; // auto-updated each build
+const BUILD = '20260530.1055'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1782,10 +1782,10 @@ function drawMenu(cx){
   }
 
   // ── Menu buttons ──────────────────────────────────────────────────────────
-  const btnH=Math.min(58,Math.floor((CH*.90-CH*.54)/4));
-  const btnW=Math.min(320,CW*.68);
-  const menuTop=CH*.54;
-  const gap=(CH*.87-menuTop-btnH*MENU_ITEMS.length)/(MENU_ITEMS.length-1);
+  const btnH=Math.min(72,Math.floor((CH*.92-CH*.50)/4));
+  const btnW=Math.min(360,CW*.78);
+  const menuTop=CH*.50;
+  const gap=(CH*.90-menuTop-btnH*MENU_ITEMS.length)/(MENU_ITEMS.length-1);
 
   MENU_ITEMS.forEach((label,i)=>{
     const by=menuTop+i*(btnH+gap);
@@ -1800,7 +1800,7 @@ function drawMenu(cx){
     // Left accent line on hover
     if(hl){cx.fillStyle='#ff4400';cx.fillRect(CW/2-btnW/2,by+2,3,btnH-4);}
     cx.fillStyle=hl?'#ffcc00':'rgba(255,255,255,.75)';
-    cx.font=(hl?'bold italic ':'italic ')+Math.min(14,btnH*.35)+'px Impact, monospace';
+    cx.font=(hl?'bold italic ':'italic ')+Math.min(18,btnH*.42)+'px Impact, monospace';
     cx.fillText(label,CW/2,by+btnH*.64);
   });
 
@@ -1872,10 +1872,10 @@ function menuClick(mx,my){
     if(adminTaps>=7){ adminTaps=0; sfxBeep(660,.12); tryAdminAction(); return; }
   }
   // MUST match drawMenu calculations exactly
-  const btnH=Math.min(58,Math.floor((CH*.90-CH*.54)/4));
-  const btnW=Math.min(320,CW*.68);
-  const menuTop=CH*.54;
-  const gap=(CH*.87-menuTop-btnH*MENU_ITEMS.length)/(MENU_ITEMS.length-1);
+  const btnH=Math.min(72,Math.floor((CH*.92-CH*.50)/4));
+  const btnW=Math.min(360,CW*.78);
+  const menuTop=CH*.50;
+  const gap=(CH*.90-menuTop-btnH*MENU_ITEMS.length)/(MENU_ITEMS.length-1);
   MENU_ITEMS.forEach((_,i)=>{
     const by=menuTop+i*(btnH+gap);
     if(mx>=CW/2-btnW/2&&mx<=CW/2+btnW/2&&my>=by&&my<=by+btnH){
@@ -2699,7 +2699,7 @@ function drawSettings(cx){
   cx.fillText('SOUND FX',labelX,y);
   _drawToggle(cx, CW*.72, y, sfxEnabled);
 
-  const bw=CW*.4, bh=CH*.075;
+  const bw=CW*.52, bh=CH*.088;
 
   // ── STATS button @ 58% ──
   y=CH*.58;
@@ -2871,10 +2871,10 @@ function drawLeaderboard(cx){
   }
 
   // Back button
-  btn(cx,CW/2-CW*.2,CH*.88,CW*.4,CH*.08,'#f0a500','#000',8);
+  btn(cx,CW/2-CW*.25,CH*.87,CW*.5,CH*.1,'#f0a500','#000',8);
   cx.fillStyle='#000'; cx.font=`bold ${Math.round(CH*.035)}px monospace`;
   cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText('◀ BACK',CW/2,CH*.92);
+  cx.fillText('◀ BACK',CW/2,CH*.92); cx.textBaseline='middle';
 }
 
 function leaderboardClick(mx,my){
@@ -3009,7 +3009,7 @@ function drawResults(cx,cam,SC){
   });
 
   // Buttons
-  const bW=CW*.38, bH=CH*.09, bY=CH*.875, gap=CW*.04;
+  const bW=CW*.40, bH=CH*.10, bY=CH*.875, gap=CW*.04;
   cx.fillStyle='#f0a500';
   cx.beginPath();cx.roundRect(CW/2-bW-gap/2,bY,bW,bH,10);cx.fill();
   cx.fillStyle='#000'; cx.font=`bold ${Math.round(bH*.38)}px monospace`;
