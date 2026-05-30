@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260530.0209'; // auto-updated each build
+const BUILD = '20260530.0220'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -3166,15 +3166,7 @@ function loop(now){
       drawHUD(G, cars[0], cars, raceT);
       drawCtrl(G, ctrlL, ctrlR, ctrlN, ctrlB, cars[0], raceT);
 
-      if(state==='countdown'){
-        drawCountdown(G, cdN, cdT);
-        G.fillStyle='rgba(0,0,0,.3)'; G.fillRect(0,0,CW,CH);
-        G.textAlign='center'; G.fillStyle='#ffee00';
-        G.font=`bold ${Math.min(CW,CH)*.18}px monospace`;
-        G.shadowColor='#ff8800'; G.shadowBlur=20;
-        G.fillText(cdN>0?String(cdN):'GO!', CW/2, CH*.52);
-        G.shadowBlur=0;
-      }
+      // countdown handled by drawCountdown in racing block above
     }
   } catch(err){
     console.error('Loop error:', err);
