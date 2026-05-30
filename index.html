@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.2128'; // auto-updated each build
+const BUILD = '20260530.2136'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1647,7 +1647,7 @@ function buyUpgrade(carId,type){
 }
 let authMode='login', authEmail='', authPwd='', authMsg='', authMsgColor='#e74c3c';
 // ─── MENU ─────────────────────────────────────────────────────────────────────
-const MENU_ITEMS=['🏁 RACE','🚗 GARAGE','🗺 TRACKS','🏆 LEADERBOARD'];
+const MENU_ITEMS=['🏁 RACE','🚗 GARAGE','🗺 TRACKS','🏆 LEADERBOARD','🎖️ ACHIEVEMENTS'];
 let menuSel=0;
 
 // ─── SCROLL HELPERS ───────────────────────────────────────────────────────────
@@ -1901,7 +1901,8 @@ function menuClick(mx,my){
       if(i===0)startRace();
       else if(i===1){state='garage';scroll.garage=0;}
       else if(i===2){state='tracks';scroll.tracks=0;}
-      else{state='leaderboard';lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoad();}
+      else if(i===3){state='leaderboard';lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoad();}
+      else if(i===4){state='achievements';}
     }
   });
 }
@@ -2811,6 +2812,120 @@ function resultsClick(mx,my){
   }
 }
 
+// ─── ACHIEVEMENTS SCREEN ──────────────────────────────────────────────────────
+function drawAchievements(cx){
+  cx.fillStyle='#080810'; cx.fillRect(0,0,CW,CH);
+
+  // Top bar
+  cx.fillStyle='rgba(0,0,0,.5)'; cx.fillRect(0,0,CW,CH*.11);
+  cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.3)'; cx.lineWidth=1.5;
+  cx.beginPath();cx.roundRect(6,4,Math.max(110,CW*.18),CH*.075,8);cx.fill();cx.stroke();
+  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.034)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('◀ BACK',6+Math.max(110,CW*.18)/2,4+CH*.0375);
+
+  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.042)}px monospace`;
+  cx.textAlign='center'; cx.fillText('🎖️  ACHIEVEMENTS',CW/2,CH*.055);
+
+  // Progress counter
+  const ach=S.achievements||{};
+  const done=ACHIEVEMENTS.filter(a=>ach[a.id]).length;
+  cx.fillStyle='rgba(255,255,255,.5)'; cx.font=`${Math.round(CH*.028)}px monospace`;
+  cx.fillText(`${done} / ${ACHIEVEMENTS.length} UNLOCKED`,CW/2,CH*.093);
+
+  // Progress bar
+  const pbW=CW*.5, pbH=6, pbX=CW/2-pbW/2, pbY=CH*.108;
+  cx.fillStyle='rgba(255,255,255,.1)';cx.beginPath();cx.roundRect(pbX,pbY,pbW,pbH,3);cx.fill();
+  if(done>0){
+    const gr=cx.createLinearGradient(pbX,0,pbX+pbW,0);
+    gr.addColorStop(0,'#f0a500'); gr.addColorStop(1,'#ffdd44');
+    cx.fillStyle=gr;cx.beginPath();cx.roundRect(pbX,pbY,(done/ACHIEVEMENTS.length)*pbW,pbH,3);cx.fill();
+  }
+
+  // Achievement grid — 2 columns
+  const cols=2;
+  const padX=CW*.04, padY=CH*.13;
+  const cW=(CW-padX*2-(cols-1)*padX*.5)/cols;
+  const cH=Math.min(CH*.2,90);
+  const gap=CH*.015;
+
+  // Progress hints for trackable achievements
+  function _prog(a){
+    if(ach[a.id]) return null;
+    if(a.id==='collector')   return {cur:Math.min((S.unlocked||[]).length,5),max:5};
+    if(a.id==='globetrotter')return {cur:Math.min((S.racedTracks||[]).length,5),max:5};
+    if(a.id==='nos_junkie')  return {cur:Math.min(S.nosCount||0,20),max:20};
+    if(a.id==='veteran')     return {cur:Math.min(S.totalRaces||0,25),max:25};
+    if(a.id==='podium')      return {cur:Math.min(S.podiumCount||0,10),max:10};
+    return null;
+  }
+
+  ACHIEVEMENTS.forEach((a,i)=>{
+    const col=i%cols, row=Math.floor(i/cols);
+    const cx2=padX+col*(cW+padX*.5);
+    const cy2=padY+row*(cH+gap);
+    const unlocked=!!ach[a.id];
+    const prog=_prog(a);
+
+    // Card BG
+    const alpha=unlocked?'.18':'.07';
+    cx.fillStyle=unlocked?`rgba(240,165,0,${alpha})`:`rgba(255,255,255,${alpha})`;
+    cx.strokeStyle=unlocked?'rgba(240,165,0,.4)':'rgba(255,255,255,.1)';
+    cx.lineWidth=1.5;
+    cx.beginPath();cx.roundRect(cx2,cy2,cW,cH,10);cx.fill();cx.stroke();
+
+    // Lock overlay
+    if(!unlocked){
+      cx.fillStyle='rgba(0,0,0,.25)';
+      cx.beginPath();cx.roundRect(cx2,cy2,cW,cH,10);cx.fill();
+    }
+
+    // Icon
+    cx.font=`${Math.round(cH*.38)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.globalAlpha=unlocked?1:.35;
+    cx.fillText(a.icon, cx2+cH*.38, cy2+cH*.36);
+    cx.globalAlpha=1;
+
+    // Name
+    cx.fillStyle=unlocked?'#f0a500':'rgba(255,255,255,.4)';
+    cx.font=`bold ${Math.round(CH*.027)}px monospace`;
+    cx.textAlign='left'; cx.textBaseline='top';
+    const tx=cx2+cH*.78;
+    cx.fillText(a.name.toUpperCase(), tx, cy2+cH*.1);
+
+    // Description
+    cx.fillStyle=unlocked?'rgba(255,255,255,.8)':'rgba(255,255,255,.3)';
+    cx.font=`${Math.round(CH*.022)}px monospace`;
+    cx.fillText(a.desc, tx, cy2+cH*.38);
+
+    // Progress bar for trackable ones
+    if(prog){
+      const bW=cW-cH*.78-padX*.3, bH=4, bX=tx, bY=cy2+cH*.65;
+      cx.fillStyle='rgba(255,255,255,.1)';cx.beginPath();cx.roundRect(bX,bY,bW,bH,2);cx.fill();
+      if(prog.cur>0){
+        cx.fillStyle='#f0a500';cx.beginPath();cx.roundRect(bX,bY,(prog.cur/prog.max)*bW,bH,2);cx.fill();
+      }
+      cx.fillStyle='rgba(255,255,255,.5)'; cx.font=`${Math.round(CH*.018)}px monospace`;
+      cx.textAlign='right'; cx.textBaseline='top';
+      cx.fillText(`${prog.cur}/${prog.max}`, cx2+cW-6, cy2+cH*.58);
+    }
+
+    // Unlock date badge
+    if(unlocked){
+      const d=new Date(ach[a.id]);
+      const ds=d.toLocaleDateString('sv-SE',{month:'short',day:'numeric'});
+      cx.fillStyle='rgba(240,165,0,.7)'; cx.font=`${Math.round(CH*.018)}px monospace`;
+      cx.textAlign='right'; cx.textBaseline='bottom';
+      cx.fillText('✓ '+ds, cx2+cW-6, cy2+cH*.95);
+    }
+  });
+}
+
+function achievementsClick(mx,my){
+  if(my<CH*.11){ state='menu'; sfxBeep(300,.08); }
+}
+
 function garageClick(mx,my){
   const sel=CAR_DEFS[garageIdx]||CAR_DEFS[0];
   const isUnlocked=(S.unlocked||['banger']).includes(sel.id);
@@ -2938,6 +3053,7 @@ C.addEventListener('touchstart',e=>{
   else if(state==='settings') settingsClick(p.x,p.y);
   else if(state==='auth')    authClick(e.clientX,e.clientY);
   else if(state==='results') resultsClick(p.x,p.y);
+  else if(state==='achievements') achievementsClick(p.x,p.y);
   updCtrl();
 },{passive:false});
 C.addEventListener('touchend',e=>{
@@ -2966,6 +3082,7 @@ C.addEventListener('click',e=>{
   else if(state==='leaderboard') leaderboardClick(p.x,p.y);
   else if(state==='settings')    settingsClick(p.x,p.y);
   else if(state==='results')     resultsClick(p.x,p.y);
+  else if(state==='achievements') achievementsClick(p.x,p.y);
   else if(state==='racing'||state==='countdown') raceClick(p.x,p.y);
 });
 document.addEventListener('keydown',e=>{
@@ -2984,7 +3101,7 @@ document.addEventListener('keydown',e=>{
       else { state='leaderboard'; lbTab=0; if(!scoresLoading&&(!globalScores||scoresError))fbLoad(); }
     }
   }
-  if(['garage','tracks','leaderboard','settings','stats'].includes(state)&&(e.key==='Escape'||e.key==='Backspace')){ state=state==='stats'?'settings':'menu'; if(state==='menu') bgmMenu(); }
+  if(['garage','tracks','leaderboard','settings','stats','achievements'].includes(state)&&(e.key==='Escape'||e.key==='Backspace')){ state=state==='stats'?'settings':'menu'; if(state==='menu') bgmMenu(); }
   if((state==='racing'||state==='countdown')&&e.key==='Escape'){ stopEngine(); setScreech(false); state='menu'; bgmMenu(); }
   if(state==='results'){ if(e.key==='Enter') startRace(); if(e.key==='Escape'){ state='menu'; bgmMenu(); } }
 });
@@ -3138,6 +3255,8 @@ function loop(now){
     } else if(state==='menu'){
       drawMenu(G);
 
+    } else if(state==='achievements'){
+      drawAchievements(cx);
     } else if(state==='garage'){
       drawGarage(G);
       // Unlock flash overlay
