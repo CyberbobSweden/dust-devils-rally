@@ -88,7 +88,7 @@ canvas { display: block; }
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.3.0';
-const BUILD = '20260529.2224'; // auto-updated each build
+const BUILD = '20260530.0130'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -844,7 +844,7 @@ function updateDrawConfetti(cx,dt){
 
 // ─── WEATHER SYSTEM ──────────────────────────────────────────────────────────
 // Track weather: 0=clear, 1=rain, 2=dusty, 3=overcast
-const TRACK_WEATHER=[0,1,0,2,1,0,2,0,1,0]; // per track index
+const TRACK_WEATHER=[0,1,2,0,1,0,2,0,1,0]; // 0=clear,1=rain,2=dust // per track index
 
 let weatherParticles=[];
 let weatherT=0;
