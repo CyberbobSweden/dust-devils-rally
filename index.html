@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260530.1620'; // auto-updated each build
+const BUILD = '20260530.2025'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -748,7 +748,7 @@ function loadLbScores(){
   const db=firebase.database();
   window._lbScores=window._lbScores||{};
   const tid=typeof lbTrack==='number'?lbTrack:parseInt(lbTrack)||0;
-  db.ref('scores_v2').orderByChild('track').equalTo(tid).limitToFirst(8).once('value',snap=>{
+  db.ref('scores_v2').orderByChild('track').equalTo(tid).limitToFirst(50).once('value',snap=>{
     const rows=[];
     snap.forEach(s=>rows.push(s.val()));
     rows.sort((a,b)=>(a.time||99)-(b.time||99));
@@ -2102,26 +2102,25 @@ function drawGarage(cx){
   const lW=CW*.45, sprSize=Math.round(Math.min(lW*.85,CH*.62));
   const sprX=lW/2-sprSize/2, sprY=CH*.12;
 
-  // Draw car using sprite sheet
-  const si=CAR_SPRITES&&CAR_SPRITES[sel.id];
+  // Draw car using sprite sheet — use sel.body for sprite key
+  const spr=CAR_SPRITES&&(CAR_SPRITES[sel.body]||CAR_SPRITES.std);
   const sheet=window._carSheetImg;
   if(!window._carSheetImg){
     const img=new Image();
     img.onload=()=>{window._carSheetImg=img;};
     img.src=CAR_SHEET_SRC; window._carSheetImg=img;
   }
-  if(sheet&&sheet.complete&&sheet.naturalWidth&&si){
+  if(sheet&&sheet.complete&&sheet.naturalWidth&&spr){
+    // Sprite is 64×96 top-down, rotate -90° so car faces right in garage
+    const dW=Math.round(sprSize*.67), dH=Math.round(sprSize);
     cx.save();
     cx.translate(sprX+sprSize/2, sprY+sprSize/2);
-    cx.drawImage(sheet,si.x,si.y,si.w,si.h,-sprSize/2,-sprSize/2,sprSize,sprSize);
-    if(S.carColors&&S.carColors[sel.id]){
-      cx.globalCompositeOperation='multiply'; cx.globalAlpha=0.4;
-      cx.fillStyle=selCol; cx.fillRect(-sprSize/2,-sprSize/2,sprSize,sprSize);
-    }
+    cx.rotate(-Math.PI/2);
+    cx.drawImage(sheet,spr.sx,spr.sy,spr.sw,spr.sh,-dH/2,-dW/2,dH,dW);
     cx.restore();
     if(!isUnlocked){
-      cx.fillStyle='rgba(0,0,0,.6)';
-      cx.beginPath();cx.arc(sprX+sprSize/2,sprY+sprSize/2,sprSize*.48,0,Math.PI*2);cx.fill();
+      cx.fillStyle='rgba(0,0,0,.65)';
+      cx.beginPath();cx.arc(sprX+sprSize/2,sprY+sprSize/2,sprSize*.45,0,Math.PI*2);cx.fill();
       cx.font=`${Math.round(sprSize*.4)}px monospace`; cx.textAlign='center'; cx.textBaseline='middle';
       cx.fillText('🔒',sprX+sprSize/2,sprY+sprSize/2);
     }
@@ -2611,8 +2610,12 @@ function drawLeaderboard(cx){
   cx.fillText('🏆 LEADERBOARD',CW/2,CH*.07);
 
   // Track tabs (scrollable row)
-  const tabW=Math.min(CW*.18,110), tabH=CH*.065;
-  const tabY=CH*.12, tabsVisible=Math.floor(CW/tabW);
+  // Responsive tabs: fit all unlocked tracks with scroll if needed
+  const _unl=S.unlockedTracks||[0];
+  const _tabCount=_unl.length;
+  const tabW=Math.max(Math.floor((CW-4*(_tabCount-1))/_tabCount),60);
+  const tabH=CH*.065;
+  const tabY=CH*.12, tabsVisible=_tabCount;
   const unlockedTr=S.unlockedTracks||[0];
   unlockedTr.slice(0,tabsVisible).forEach((ti,i)=>{
     const tx=i*tabW;
@@ -2622,7 +2625,7 @@ function drawLeaderboard(cx){
     cx.fillStyle=isSel?'#000':'rgba(255,255,255,.6)';
     cx.font=`bold ${Math.round(tabH*.35)}px monospace`;
     cx.textAlign='center'; cx.textBaseline='middle';
-    cx.fillText(ALL_TRACKS[ti]?ALL_TRACKS[ti].name.substring(0,8):'?',tx+tabW/2,tabY+tabH/2);
+    cx.fillText(ALL_TRACKS[ti]?ALL_TRACKS[ti].name.substring(0,10):'?',tx+tabW/2,tabY+tabH/2);
   });
 
   // Scores for selected track
