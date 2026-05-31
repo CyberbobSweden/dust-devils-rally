@@ -109,7 +109,7 @@ function drawTimeOverlay(cx){
   }
 }
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260531.0430'; // auto-updated each build
+const BUILD = '20260531.0530'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1817,29 +1817,50 @@ function drawMenu(cx){
     cx.fillText('Welcome back, '+S.name+'!',CW/2,infoY+Math.min(18,CH*.034));
   }
 
-  // ── Menu buttons ──────────────────────────────────────────────────────────
-  const _menuN=MENU_ITEMS.length, _menuGapMin=8;
-  const _isMobile=CW<600||('ontouchstart' in window);
-  const btnH=Math.min(70,Math.floor((CH*.42-_menuGapMin*(_menuN-1))/_menuN));
-  const btnW=Math.min(420,CW*.88);
-  const menuTop=CH*.49;
-  const gap=(CH*.42-btnH*_menuN)/(_menuN-1);
+  // ── Menu buttons — 2-column grid with 3D effect ───────────────────────────
+  const _gap=10, _cols=2;
+  const _btnW=Math.floor((Math.min(460,CW*.92)-_gap)/_cols);
+  const _btnH=Math.min(68,Math.max(52,CH*.09));
+  const _rows=Math.ceil(MENU_ITEMS.length/_cols);
+  const _gridW=_cols*_btnW+_gap;
+  const _gridX=CW/2-_gridW/2;
+  const _gridY=CH*.48;
 
   MENU_ITEMS.forEach((label,i)=>{
-    const by=menuTop+i*(btnH+gap);
+    const col=i%_cols, row=Math.floor(i/_cols);
+    const bx=_gridX+col*(_btnW+_gap);
+    const by=_gridY+row*(_btnH+_gap);
     const hl=menuSel===i;
-    // Background with subtle gradient
-    const gr=cx.createLinearGradient(CW/2-btnW/2,by,CW/2+btnW/2,by+btnH);
-    gr.addColorStop(0,hl?'rgba(255,80,0,.22)':'rgba(255,255,255,.06)');
-    gr.addColorStop(1,hl?'rgba(200,20,0,.18)':'rgba(255,255,255,.03)');
-    cx.fillStyle=gr;cx.beginPath();cx.roundRect(CW/2-btnW/2,by,btnW,btnH,4);cx.fill();
-    cx.strokeStyle=hl?'#ff5500':'rgba(255,255,255,.18)';
-    cx.lineWidth=hl?2:1;cx.stroke();
-    // Left accent line on hover
-    if(hl){cx.fillStyle='#ff4400';cx.fillRect(CW/2-btnW/2,by+2,3,btnH-4);}
-    cx.fillStyle=hl?'#ffcc00':'rgba(255,255,255,.75)';
-    cx.font=(hl?'bold italic ':'italic ')+Math.min(22,Math.max(16,btnH*.48))+'px Impact, monospace';
-    cx.fillText(label,CW/2,by+btnH*.64);
+
+    // 3D shadow layer (bottom-right offset)
+    cx.fillStyle=hl?'rgba(255,80,0,.55)':'rgba(0,0,0,.45)';
+    cx.beginPath();cx.roundRect(bx+3,by+4,_btnW,_btnH,6);cx.fill();
+
+    // Main button face gradient
+    const gr=cx.createLinearGradient(bx,by,bx,by+_btnH);
+    if(hl){
+      gr.addColorStop(0,'rgba(255,120,20,.9)');
+      gr.addColorStop(1,'rgba(180,30,0,.85)');
+    } else {
+      gr.addColorStop(0,'rgba(60,60,80,.85)');
+      gr.addColorStop(1,'rgba(20,20,35,.9)');
+    }
+    cx.fillStyle=gr;cx.beginPath();cx.roundRect(bx,by,_btnW,_btnH,6);cx.fill();
+
+    // Top highlight (bevel effect)
+    cx.fillStyle=hl?'rgba(255,200,100,.3)':'rgba(255,255,255,.08)';
+    cx.beginPath();cx.roundRect(bx+2,by+2,_btnW-4,_btnH/3,4);cx.fill();
+
+    // Border
+    cx.strokeStyle=hl?'#ff6600':'rgba(255,255,255,.22)';
+    cx.lineWidth=hl?2:1;
+    cx.beginPath();cx.roundRect(bx,by,_btnW,_btnH,6);cx.stroke();
+
+    // Label
+    cx.fillStyle=hl?'#fff':'rgba(255,255,255,.82)';
+    cx.font=(hl?'bold ':'')+'italic '+Math.min(20,Math.max(14,_btnH*.38))+'px Impact, monospace';
+    cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillText(label,bx+_btnW/2,by+_btnH*.56);
   });
 
   // ── Version + credit ──────────────────────────────────────────────────────
@@ -1926,16 +1947,18 @@ function menuClick(mx,my){
     sfxBeep(300+adminTaps*30,.03);
     if(adminTaps>=7){ adminTaps=0; sfxBeep(660,.12); tryAdminAction(); return; }
   }
-  // MUST match drawMenu calculations exactly
-  const _menuN=MENU_ITEMS.length, _menuGapMin=8;
-  const _isMobile=CW<600||('ontouchstart' in window);
-  const btnH=Math.min(70,Math.floor((CH*.42-_menuGapMin*(_menuN-1))/_menuN));
-  const btnW=Math.min(420,CW*.88);
-  const menuTop=CH*.49;
-  const gap=(CH*.42-btnH*_menuN)/(_menuN-1);
+  // MUST match drawMenu grid calculations exactly
+  const _gap=10, _cols=2;
+  const _btnW=Math.floor((Math.min(460,CW*.92)-_gap)/_cols);
+  const _btnH=Math.min(68,Math.max(52,CH*.09));
+  const _gridW=_cols*_btnW+_gap;
+  const _gridX=CW/2-_gridW/2;
+  const _gridY=CH*.48;
   MENU_ITEMS.forEach((_,i)=>{
-    const by=menuTop+i*(btnH+gap);
-    if(mx>=CW/2-btnW/2&&mx<=CW/2+btnW/2&&my>=by&&my<=by+btnH){
+    const col=i%_cols, row=Math.floor(i/_cols);
+    const bx=_gridX+col*(_btnW+_gap);
+    const by=_gridY+row*(_btnH+_gap);
+    if(mx>=bx&&mx<=bx+_btnW&&my>=by&&my<=by+_btnH){
       menuSel=i;
       if(i===0)startRace();
       else if(i===1){state='garage';scroll.garage=0;}
@@ -2038,21 +2061,21 @@ function drawTrackSelect(cx){
       cx.fillText('Complete track '+i,cx2+cW/2,infoY+nameSize+subSize*2+14);
     }
 
-    // Fixed-position buttons using card percentage
+    // Fixed-position buttons: SELECT at bottom, GHOST below (outside card = footer)
     const infoH=cH-Math.floor(cH*0.5);
-    const bH=Math.max(16,Math.floor(infoH*.28));
-    const selBtnY=cy2+cH-bH-2;
-    const ghoBtnY=selBtnY-bH-3;
+    const bH=Math.max(18,Math.floor(infoH*.30));
+    const selBtnY=cy2+cH-bH-4;
+    const ghoBtnY=selBtnY-bH-5;
     if(sel){
-      btn(cx,cx2+6,selBtnY,cW-12,bH,'rgba(255,220,50,.3)','#ffdd33');
+      btn(cx,cx2+4,selBtnY,cW-8,bH,'rgba(255,220,50,.3)','#ffdd33');
       cx.fillStyle='#ffdd33';cx.font=`bold ${subSize}px monospace`;cx.textAlign='center';cx.fillText('✓ SELECTED',cx2+cW/2,selBtnY+bH*.65);
       const _ghOn=S.ghostEnabled||false;
-      btn(cx,cx2+6,ghoBtnY,cW-12,bH,_ghOn?'rgba(80,255,160,.18)':'rgba(60,60,60,.3)',_ghOn?'#44ffaa':'rgba(150,150,150,.4)');
-      cx.fillStyle=_ghOn?'#44ffaa':'rgba(180,180,180,.55)';
-      cx.font=`${Math.round(bH*.6)}px monospace`;cx.textAlign='center';
+      btn(cx,cx2+4,ghoBtnY,cW-8,bH,_ghOn?'rgba(80,255,160,.22)':'rgba(60,60,60,.35)',_ghOn?'#44ffaa':'rgba(150,150,150,.5)');
+      cx.fillStyle=_ghOn?'#44ffaa':'rgba(180,180,180,.65)';
+      cx.font=`${Math.round(bH*.58)}px monospace`;cx.textAlign='center';
       cx.fillText((_ghOn?'👻 GHOST ON':'👻 GHOST OFF'),cx2+cW/2,ghoBtnY+bH*.65);
     }else if(unlocked){
-      btn(cx,cx2+6,selBtnY,cW-12,bH,'rgba(60,160,220,.25)','rgba(80,180,240,.5)');
+      btn(cx,cx2+4,selBtnY,cW-8,bH,'rgba(60,160,220,.25)','rgba(80,180,240,.5)');
       cx.fillStyle='#88ccff';cx.font=`bold ${subSize}px monospace`;cx.textAlign='center';cx.fillText('SELECT',cx2+cW/2,selBtnY+bH*.65);
     }
     cx.restore();
@@ -3079,11 +3102,11 @@ function garageClick(mx,my){
   // BACK button - top bar area
   if(my<CH*.1){ state='menu'; sfxBeep(300,.08); return; }
 
-  // Left/right arrows
-  if(mx<arW&&my>CH*.28&&my<CH*.72){
+  // Left/right arrows - restricted to car display area only (not upgrade buttons)
+  if(mx<arW&&my>CH*.28&&my<CH*.58){
     if(garageIdx>0){ garageIdx--; sfxBeep(400,.06); } return;
   }
-  if(mx>CW-arW&&my>CH*.28&&my<CH*.72){
+  if(mx>CW-arW&&my>CH*.28&&my<CH*.58){
     if(garageIdx<CAR_DEFS.length-1){ garageIdx++; sfxBeep(400,.06); } return;
   }
 
