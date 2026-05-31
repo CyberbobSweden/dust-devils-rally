@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260531.0300'; // auto-updated each build
+const BUILD = '20260531.0320'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2456,29 +2456,42 @@ function drawAuth(cx){
 }
 
 function authClick(mx,my){
-  const tabY=CH*.20, tabH=CH*.065, tabW=CW*.38;
-  // Tab switch
-  if(Math.abs(my-tabY)<tabH){
-    if(mx<CW/2){ authMode='login'; authMsg=''; }
-    else { authMode='register'; authMsg=''; }
-    sfxBeep(440,.08); return;
+  // All positions MUST match drawAuth exactly
+  const fW=CW*.46, fH=CH*.082, fX=CW/2-fW/2;
+  const tabW=CW*.22, tabH=CH*.065, tabY=CH*.22, tabGap=4;
+  const tabX=CW/2-tabW-tabGap/2;
+  const btnH=CH*.088, btnY=CH*.56, btnX=fX;
+  const gY=btnY+btnH+CH*.02;
+  const isApp=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
+
+  // Tabs LOGIN/REGISTER
+  if(my>=tabY&&my<=tabY+tabH){
+    if(mx>=tabX&&mx<=tabX+tabW){ authMode='login'; authMsg=''; sfxBeep(440,.08); }
+    else if(mx>=tabX+tabW+tabGap&&mx<=tabX+tabW*2+tabGap){ authMode='register'; authMsg=''; sfxBeep(440,.08); }
+    return;
   }
-  // Guest
-  if(my>=CH*.84){ startAsGuest(); return; }
 
-  // Google (web only)
-  const _isApp=!!(window.Capacitor||window.ReactNativeWebView||(navigator.userAgent.includes('wv')&&!navigator.userAgent.includes('Chrome/')));
-  const fh=CH*.068;
-  if(!_isApp&&my>=CH*.695&&my<=CH*.695+fh){ doGoogleAuth(); return; }
+  // Email field (drawn at CH*.33)
+  if(my>=CH*.33&&my<=CH*.33+fH){ promptField('email'); return; }
 
-  // Email
-  if(my>=CH*.28&&my<=CH*.28+fh){ promptField('email'); return; }
-  // Password
-  if(my>=CH*.38&&my<=CH*.38+fh){ promptField('password'); return; }
-  // Forgot password
-  if(authMode==='login'&&my>=CH*.46&&my<=CH*.52){ doForgotPassword(); return; }
-  // Submit
-  if(my>=CH*.575&&my<=CH*.575+fh*1.1){ doAuth(); return; }
+  // Password field (drawn at CH*.44)
+  if(my>=CH*.44&&my<=CH*.44+fH){ promptField('password'); return; }
+
+  // LOG IN / CREATE ACCOUNT button (drawn at btnY=CH*.56)
+  if(my>=btnY&&my<=btnY+btnH){ doAuth(); return; }
+
+  // PLAY AS GUEST button (drawn at gY)
+  if(my>=gY&&my<=gY+btnH*.85){ startAsGuest(); return; }
+
+  // Forgot password (drawn at gY+btnH*.9+CH*.04)
+  const forgotY=gY+btnH*.9+CH*.04;
+  if(authMode==='login'&&my>=forgotY-CH*.03&&my<=forgotY+CH*.03){ doForgotPassword(); return; }
+
+  // Google sign-in (drawn at ggY=gY+btnH*.85+CH*.07)
+  if(!isApp){
+    const ggY=gY+btnH*.85+CH*.07;
+    if(my>=ggY&&my<=ggY+btnH*.85){ doGoogleAuth(); return; }
+  }
 }
 
 function promptField(field){
