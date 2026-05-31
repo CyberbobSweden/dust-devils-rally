@@ -84,7 +84,7 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260531.0200'; // auto-updated each build
+const BUILD = '20260531.0300'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2456,46 +2456,104 @@ function drawAuth(cx){
 }
 
 function authClick(mx,my){
-  const fW=CW*.46, fH=CH*.082, fX=CW/2-fW/2;
-  const tabW=CW*.22, tabH=CH*.065, tabY=CH*.22, tabGap=4;
-  const tabX=CW/2-tabW-tabGap/2;
+  const tabY=CH*.20, tabH=CH*.065, tabW=CW*.38;
+  // Tab switch
+  if(Math.abs(my-tabY)<tabH){
+    if(mx<CW/2){ authMode='login'; authMsg=''; }
+    else { authMode='register'; authMsg=''; }
+    sfxBeep(440,.08); return;
+  }
+  // Guest
+  if(my>=CH*.84){ startAsGuest(); return; }
 
-  // Tabs
-  if(my>=tabY&&my<=tabY+tabH){
-    if(mx>=tabX&&mx<=tabX+tabW){ authMode='login'; authMsg=''; return; }
-    if(mx>=tabX+tabW+tabGap&&mx<=tabX+tabW*2+tabGap){ authMode='register'; authMsg=''; return; }
-  }
-  // Email field
-  if(my>=CH*.33&&my<=CH*.33+fH&&mx>=fX&&mx<=fX+fW){
-    const v=prompt('Email:',authEmail)||authEmail; authEmail=v; return;
-  }
-  // Password field
-  if(my>=CH*.44&&my<=CH*.44+fH&&mx>=fX&&mx<=fX+fW){
-    const v=prompt('Password:','')||''; if(v) authPwd=v; return;
-  }
-  // Main button
-  const btnH=CH*.088, btnY=CH*.56, btnX=fX;
-  if(my>=btnY&&my<=btnY+btnH&&mx>=btnX&&mx<=btnX+fW){
-    if(authMode==='login') doLogin();
-    else doRegister();
-    return;
-  }
-  // Guest button
-  const gY=btnY+btnH+CH*.02;
-  if(my>=gY&&my<=gY+btnH*.85&&mx>=btnX&&mx<=btnX+fW){
-    authMsg=''; state='menu'; bgmMenu(); return;
-  }
+  // Google (web only)
+  const _isApp=!!(window.Capacitor||window.ReactNativeWebView||(navigator.userAgent.includes('wv')&&!navigator.userAgent.includes('Chrome/')));
+  const fh=CH*.068;
+  if(!_isApp&&my>=CH*.695&&my<=CH*.695+fh){ doGoogleAuth(); return; }
+
+  // Email
+  if(my>=CH*.28&&my<=CH*.28+fh){ promptField('email'); return; }
+  // Password
+  if(my>=CH*.38&&my<=CH*.38+fh){ promptField('password'); return; }
   // Forgot password
-  if(authMode==='login'&&my>gY+btnH*.9&&my<gY+btnH*.9+CH*.06){
-    if(!authEmail){ authMsg='Enter your email first'; return; }
-    firebase.auth().sendPasswordResetEmail(authEmail).then(()=>{ authMsg='Reset email sent!'; authMsgColor='#2ecc71'; }).catch(e=>{ authMsg=e.message.substring(0,50); });
-    return;
+  if(authMode==='login'&&my>=CH*.46&&my<=CH*.52){ doForgotPassword(); return; }
+  // Submit
+  if(my>=CH*.575&&my<=CH*.575+fh*1.1){ doAuth(); return; }
+}
+
+function promptField(field){
+  const val = prompt(field==='email'?'Enter email:':'Enter password:','');
+  if(val===null) return;
+  if(field==='email') authEmail=val.trim();
+  else authPwd=val;
+}
+
+function startAsGuest(){
+  authMsg=''; state='menu'; bgmMenu();
+  sfxBeep(440,.08);
+}
+
+async function checkDisplayName(user){
+  if(!user) return;
+  let name = user.displayName || '';
+  if(!name || name.includes('@') || name.includes('.')){
+    name = prompt('Choose your racer name (max 10 chars):','') || '';
+    name = name.trim().toUpperCase().substring(0,10);
+    if(name){ await user.updateProfile({displayName: name}).catch(()=>{}); }
   }
-  // Google
-  const isApp=typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform();
-  if(!isApp){
-    const ggY=gY+btnH*.85+CH*.07;
-    if(my>=ggY&&my<=ggY+btnH*.85&&mx>=btnX&&mx<=btnX+fW){ doGoogleSignIn(); }
+  S.name = (user.displayName||name||'RACER').toUpperCase().substring(0,10);
+  doSave();
+}
+
+async function doGoogleAuth(){
+  if(typeof firebase==='undefined'){ startAsGuest(); return; }
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const result = await firebase.auth().signInWithPopup(provider);
+    await checkDisplayName(result.user);
+    authMsg=''; state='menu'; bgmMenu(); sfxBeep(660,.15);
+  } catch(e){
+    authMsgColor='#e74c3c';
+    if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request') authMsg='Cancelled';
+    else if(e.code==='auth/popup-blocked') authMsg='Popup blocked - use email login';
+    else authMsg='Use email login or try the app';
+  }
+}
+
+async function doForgotPassword(){
+  if(typeof firebase==='undefined'){ authMsg='Not available'; return; }
+  const email=authEmail||(prompt('Enter your email:')||'').trim();
+  if(!email){ authMsg='Enter your email first'; authMsgColor='#e74c3c'; return; }
+  try {
+    await firebase.auth().sendPasswordResetEmail(email);
+    authMsg='Reset email sent! Check your inbox.'; authMsgColor='#2ecc71';
+  } catch(e){
+    authMsgColor='#e74c3c';
+    authMsg = e.code==='auth/user-not-found'?'No account found':'Error sending email';
+  }
+}
+
+async function doAuth(){
+  if(typeof firebase==='undefined'){ startAsGuest(); return; }
+  if(!authEmail||!authPwd){ authMsg='Please fill all fields'; authMsgColor='#e74c3c'; return; }
+  authMsg='...'; authMsgColor='#f0a500';
+  try {
+    const auth=firebase.auth();
+    if(authMode==='login'){
+      await auth.signInWithEmailAndPassword(authEmail,authPwd);
+    } else {
+      await auth.createUserWithEmailAndPassword(authEmail,authPwd);
+    }
+    await checkDisplayName(firebase.auth().currentUser);
+    authMsg=''; state='menu'; bgmMenu(); sfxBeep(660,.15);
+  } catch(e){
+    authMsgColor='#e74c3c';
+    if(e.code==='auth/user-not-found') authMsg='No account found';
+    else if(e.code==='auth/wrong-password') authMsg='Wrong password';
+    else if(e.code==='auth/email-already-in-use') authMsg='Email already used';
+    else if(e.code==='auth/weak-password') authMsg='Password too short (6+)';
+    else if(e.code==='auth/invalid-email') authMsg='Invalid email';
+    else authMsg='Error: '+e.code;
   }
 }
 
