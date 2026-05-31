@@ -83,8 +83,33 @@ body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-
   <script>firebase.initializeApp({apiKey:"AIzaSyD0VONk41nslTNauiO59sngkyMTwEyFxnQ",authDomain:"dust-devils-rally.firebaseapp.com",projectId:"dust-devils-rally",appId:"1:772387413090:web:756355d8c70eb4f80fc53b",databaseURL:"https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app"});</script>
   <script>// ─── VERSION ─────────────────────────────────────────────────────────────────
 const VERSION = 'v4.5.0';
+
+// ─── DAY/NIGHT/DUSK SYSTEM ───────────────────────────────────────────────────
+function getTimeOfDay(){
+  const h=new Date().getHours();
+  if(h>=5&&h<8)   return {name:'dawn',   sky:'rgba(255,140,60,.18)',  ambient:'rgba(255,180,100,.12)', stars:0.3};
+  if(h>=8&&h<17)  return {name:'day',    sky:'rgba(135,206,235,.08)', ambient:'rgba(255,255,200,.06)', stars:0};
+  if(h>=17&&h<20) return {name:'dusk',   sky:'rgba(255,100,30,.22)',  ambient:'rgba(255,80,20,.15)',   stars:0.2};
+  if(h>=20&&h<22) return {name:'evening',sky:'rgba(80,30,120,.28)',   ambient:'rgba(120,60,200,.12)',  stars:0.6};
+  return                  {name:'night', sky:'rgba(10,10,40,.55)',    ambient:'rgba(30,30,100,.2)',     stars:1.0};
+}
+function drawTimeOverlay(cx){
+  const tod=getTimeOfDay();
+  // Sky tint
+  cx.fillStyle=tod.sky; cx.fillRect(0,0,CW,CH);
+  // Stars at night
+  if(tod.stars>0){
+    const rng=seededRng(42);
+    for(let i=0;i<60;i++){
+      const sx=rng()*CW, sy=rng()*CH*.6;
+      const alpha=tod.stars*(0.4+rng()*.6)*Math.sin(Date.now()*.001+i)*.5+tod.stars*.5;
+      cx.fillStyle=`rgba(255,255,255,${alpha.toFixed(2)})`;
+      cx.fillRect(sx,sy,1.5,1.5);
+    }
+  }
+}
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260531.0320'; // auto-updated each build
+const BUILD = '20260531.0430'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1713,7 +1738,8 @@ async function tryAdminAction(){
 function drawMenu(cx){
   drawTrack(cx,{x:TRK[0].x,y:TRK[0].y},getScale(true));
   drawVignette(cx);
-  cx.fillStyle='rgba(0,0,0,.78)';cx.fillRect(0,0,CW,CH);
+  drawTimeOverlay(cx);
+  cx.fillStyle='rgba(0,0,0,.75)';cx.fillRect(0,0,CW,CH);
 
   // ── Checkered flag bar at top ────────────────────────────────────────────
   const csz=Math.max(6,Math.round(CH*.016));
@@ -1738,7 +1764,7 @@ function drawMenu(cx){
   // ── DUST DEVILS title (pulsing) ─────────────────────────────────────────────
   cx.textAlign='center';
   const titleY=csz*2+CH*.14;
-  const titleSize=Math.min(42,Math.max(26,CH*.072));
+  const titleSize=Math.min(56,Math.max(32,CH*.082));
   const _tPulse=Date.now()*.001;
   const _pulse=1+Math.sin(_tPulse*1.8)*.025;
   cx.save();
@@ -1783,7 +1809,7 @@ function drawMenu(cx){
   // ── Player info ───────────────────────────────────────────────────────────
   const infoY=rallyY+rallyH+CH*.04;
   cx.fillStyle='rgba(255,210,80,.8)';
-  cx.font=`bold ${Math.min(14,CH*.028)}px monospace`;
+  cx.font=`bold ${Math.min(18,Math.max(13,CH*.034))}px monospace`;
   cx.fillText('$'+S.coins+' coins  ·  '+((TDEF?TDEF.name:'')),CW/2,infoY);
   if(S.name){
     cx.fillStyle='rgba(255,255,255,.38)';
@@ -1792,11 +1818,12 @@ function drawMenu(cx){
   }
 
   // ── Menu buttons ──────────────────────────────────────────────────────────
-  const _menuN=MENU_ITEMS.length, _menuGapMin=6;
-  const btnH=Math.min(58,Math.floor((CH*.40-_menuGapMin*(_menuN-1))/_menuN));
-  const btnW=Math.min(360,CW*.78);
-  const menuTop=CH*.50;
-  const gap=(CH*.40-btnH*_menuN)/(_menuN-1);
+  const _menuN=MENU_ITEMS.length, _menuGapMin=8;
+  const _isMobile=CW<600||('ontouchstart' in window);
+  const btnH=Math.min(70,Math.floor((CH*.42-_menuGapMin*(_menuN-1))/_menuN));
+  const btnW=Math.min(420,CW*.88);
+  const menuTop=CH*.49;
+  const gap=(CH*.42-btnH*_menuN)/(_menuN-1);
 
   MENU_ITEMS.forEach((label,i)=>{
     const by=menuTop+i*(btnH+gap);
@@ -1811,7 +1838,7 @@ function drawMenu(cx){
     // Left accent line on hover
     if(hl){cx.fillStyle='#ff4400';cx.fillRect(CW/2-btnW/2,by+2,3,btnH-4);}
     cx.fillStyle=hl?'#ffcc00':'rgba(255,255,255,.75)';
-    cx.font=(hl?'bold italic ':'italic ')+Math.min(18,btnH*.42)+'px Impact, monospace';
+    cx.font=(hl?'bold italic ':'italic ')+Math.min(22,Math.max(16,btnH*.48))+'px Impact, monospace';
     cx.fillText(label,CW/2,by+btnH*.64);
   });
 
@@ -1900,11 +1927,12 @@ function menuClick(mx,my){
     if(adminTaps>=7){ adminTaps=0; sfxBeep(660,.12); tryAdminAction(); return; }
   }
   // MUST match drawMenu calculations exactly
-  const _menuN=MENU_ITEMS.length, _menuGapMin=6;
-  const btnH=Math.min(58,Math.floor((CH*.40-_menuGapMin*(_menuN-1))/_menuN));
-  const btnW=Math.min(360,CW*.78);
-  const menuTop=CH*.50;
-  const gap=(CH*.40-btnH*_menuN)/(_menuN-1);
+  const _menuN=MENU_ITEMS.length, _menuGapMin=8;
+  const _isMobile=CW<600||('ontouchstart' in window);
+  const btnH=Math.min(70,Math.floor((CH*.42-_menuGapMin*(_menuN-1))/_menuN));
+  const btnW=Math.min(420,CW*.88);
+  const menuTop=CH*.49;
+  const gap=(CH*.42-btnH*_menuN)/(_menuN-1);
   MENU_ITEMS.forEach((_,i)=>{
     const by=menuTop+i*(btnH+gap);
     if(mx>=CW/2-btnW/2&&mx<=CW/2+btnW/2&&my>=by&&my<=by+btnH){
@@ -2581,12 +2609,12 @@ function drawSettings(cx){
   cx.textAlign='center'; cx.textBaseline='middle';
   cx.fillText('⚙ SETTINGS',CW/2,CH*.10);
 
-  const rowH=CH*.11, startY=CH*.20, sliderW=CW*.55, knobR=CH*.022;
-  const labelX=CW*.08, valX=CW*.92, sliderX=CW*.22;
+  const rowH=CH*.13, startY=CH*.21, sliderW=CW*.52, knobR=CH*.026;
+  const labelX=CW*.08, valX=CW*.92, sliderX=CW*.24;
 
   // ── MUSIC ON/OFF ──
   let y=startY;
-  cx.fillStyle='#aaa'; cx.font=`${Math.round(CH*.038)}px monospace`;
+  cx.fillStyle='#aaa'; cx.font=`${Math.round(CH*.045)}px monospace`;
   cx.textAlign='left'; cx.fillText('MUSIC',labelX,y);
   _drawToggle(cx, CW*.72, y, bgmEnabled);
 
@@ -2603,14 +2631,14 @@ function drawSettings(cx){
   cx.fillText('SOUND FX',labelX,y);
   _drawToggle(cx, CW*.72, y, sfxEnabled);
 
-  const bw=CW*.52, bh=CH*.088;
+  const bw=CW*.72, bh=CH*.095;
 
   // ── STATS button @ 58% ──
   y=CH*.58;
   cx.fillStyle='#0a1a0a'; cx.strokeStyle='#2ecc71'; cx.lineWidth=2;
   cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
   cx.fillStyle='#2ecc71'; cx.textAlign='center'; cx.textBaseline='middle';
-  cx.font=`bold ${Math.round(CH*.032)}px monospace`;
+  cx.font=`bold ${Math.round(CH*.042)}px monospace`;
   cx.fillText('📊 MY STATS',CW/2,y);
 
   // ── CHANGE NAME button @ 70% ──
@@ -2618,7 +2646,7 @@ function drawSettings(cx){
   cx.fillStyle='#0a1a2a'; cx.strokeStyle='#4af'; cx.lineWidth=2;
   cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
   cx.fillStyle='#4af'; cx.textAlign='center'; cx.textBaseline='middle';
-  cx.font=`bold ${Math.round(CH*.032)}px monospace`;
+  cx.font=`bold ${Math.round(CH*.042)}px monospace`;
   cx.fillText('✎ CHANGE NAME',CW/2,y);
   cx.fillStyle='rgba(255,255,255,.5)';
   cx.font=`${Math.round(CH*.026)}px monospace`;
@@ -2629,7 +2657,7 @@ function drawSettings(cx){
   cx.fillStyle='#1a1a2e'; cx.strokeStyle='#f0a500'; cx.lineWidth=2;
   cx.beginPath(); cx.roundRect(CW/2-bw/2,y-bh/2,bw,bh,8); cx.fill(); cx.stroke();
   cx.fillStyle='#f0a500'; cx.textAlign='center'; cx.textBaseline='middle';
-  cx.font=`bold ${Math.round(CH*.036)}px monospace`;
+  cx.font=`bold ${Math.round(CH*.046)}px monospace`;
   cx.fillText('◀ BACK',CW/2,y);
 
   // ── LOGOUT button @ 93% ──
@@ -2674,15 +2702,14 @@ function _drawSlider(cx,x,y,w,val){
 
 let _sliderDrag=false;
 function settingsClick(mx,my){
-  const rowH=CH*.11, startY=CH*.20;
-  const sliderW=CW*.55, sliderX=CW*.22;
+  const rowH=CH*.13, startY=CH*.21;
+  const sliderW=CW*.52, sliderX=CW*.24;
+  const bh=CH*.095;
 
-  // Back button
-  if(my>=CH*.782&&my<CH*.858){ state='menu'; sfxBeep(300,.08); return; }
-  // Stats button
-  if(my>=CH*.542&&my<CH*.618){ state='stats'; sfxBeep(440,.08); return; }
-  // Change name button
-  if(my>=CH*.662&&my<CH*.738){
+  // Stats button @ 58%
+  if(my>=CH*.58-bh/2&&my<CH*.58+bh/2){ state='stats'; sfxBeep(440,.08); return; }
+  // Change name button @ 70%
+  if(my>=CH*.70-bh/2&&my<CH*.70+bh/2){
     const n=(prompt('New racer name (max 10):', S.name)||'').trim().toUpperCase().substring(0,10);
     if(n){ S.name=n; doSave();
       if(typeof firebase!=='undefined'&&firebase.auth().currentUser)
@@ -2690,8 +2717,10 @@ function settingsClick(mx,my){
     }
     return;
   }
-  // Logout button
-  if(my>=CH*.892){
+  // Back button @ 82%
+  if(my>=CH*.82-bh/2&&my<CH*.82+bh/2){ state='menu'; sfxBeep(300,.08); return; }
+  // Logout button @ 93%
+  if(my>=CH*.93-bh/2){
     if(typeof firebase!=='undefined' && firebase.auth().currentUser){
       firebase.auth().signOut().then(()=>{
         state='auth'; authEmail=''; authPwd=''; authMsg='';
@@ -2703,18 +2732,18 @@ function settingsClick(mx,my){
 
   // Music toggle
   let y=startY;
-  if(Math.abs(my-y)<CH*.06 && mx>CW*.60){
+  if(Math.abs(my-y)<CH*.07 && mx>CW*.60){
     bgmToggle(); beep(bgmEnabled?440:220,.08); return;
   }
   // Volume slider
   y+=rowH;
-  if(Math.abs(my-y)<CH*.07 && mx>=sliderX && mx<=sliderX+sliderW){
+  if(Math.abs(my-y)<CH*.08 && mx>=sliderX && mx<=sliderX+sliderW){
     const v=(mx-sliderX)/sliderW;
     setBgmVolume(v); doSave(); return;
   }
   // SFX toggle
   y+=rowH;
-  if(Math.abs(my-y)<CH*.06 && mx>CW*.60){
+  if(Math.abs(my-y)<CH*.07 && mx>CW*.60){
     sfxEnabled=!sfxEnabled; doSave();
     beep(sfxEnabled?440:220,.08); return;
   }
@@ -2962,7 +2991,7 @@ function drawAchievements(cx){
   const cols=2;
   const padX=CW*.04, padY=CH*.13;
   const cW=(CW-padX*2-(cols-1)*padX*.5)/cols;
-  const cH=Math.min(CH*.2,90);
+  const cH=Math.min(CH*.22,110);
   const gap=CH*.015;
 
   // Progress hints for trackable achievements
