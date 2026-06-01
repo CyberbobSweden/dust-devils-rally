@@ -110,7 +110,7 @@ function drawTimeOverlay(cx){
   }
 }
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260601.0600'; // auto-updated each build
+const BUILD = '20260601.0620'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -1232,39 +1232,14 @@ class Car{
       cx.beginPath();cx.ellipse(px*.4,px*.8,dW*.5,dH*.13,0,0,Math.PI*2);cx.fill();cx.globalAlpha=1;
     }
 
-    // Draw car using canvas pixel art (body-specific)
-    const _cw=dW, _ch=dH, _cc=def.col||'#4477ff';
-    // Body
-    cx.fillStyle=_cc;
-    cx.beginPath();cx.roundRect(x0,y0,_cw,_ch,_cw*.22);cx.fill();
-    // Hood dark
-    cx.fillStyle='rgba(0,0,0,.3)';
-    cx.beginPath();cx.roundRect(x0+_cw*.08,y0,_cw*.84,_ch*.32,_cw*.18);cx.fill();
-    // Windshield
-    cx.fillStyle='rgba(140,210,255,.8)';
-    cx.beginPath();cx.roundRect(x0+_cw*.18,y0+_ch*.04,_cw*.64,_ch*.2,_cw*.1);cx.fill();
-    // Roof
-    cx.fillStyle='rgba(0,0,0,.35)';
-    cx.beginPath();cx.roundRect(x0+_cw*.22,y0+_ch*.26,_cw*.56,_ch*.2,_cw*.1);cx.fill();
-    // Rear window
-    cx.fillStyle='rgba(100,180,255,.6)';
-    cx.beginPath();cx.roundRect(x0+_cw*.2,y0+_ch*.48,_cw*.6,_ch*.14,_cw*.08);cx.fill();
-    // Headlights
-    cx.fillStyle='rgba(255,255,180,.9)';
-    cx.fillRect(x0+_cw*.08,y0+_ch*.01,_cw*.2,_ch*.05);
-    cx.fillRect(x0+_cw*.72,y0+_ch*.01,_cw*.2,_ch*.05);
-    // Tail lights
-    cx.fillStyle='rgba(255,30,0,.9)';
-    cx.fillRect(x0+_cw*.08,y0+_ch*.9,_cw*.2,_ch*.04);
-    cx.fillRect(x0+_cw*.72,y0+_ch*.9,_cw*.2,_ch*.04);
-    // Wheels
-    cx.fillStyle='#111';
-    [[-_cw*.12,_ch*.28],[_cw*.12,_ch*.28],[-_cw*.12,-_ch*.28],[_cw*.12,-_ch*.28]].forEach(([wx,wy])=>{
-      cx.beginPath();cx.ellipse(wx,wy,_cw*.18,_ch*.07,0,0,Math.PI*2);cx.fill();
-    });
-    // Top highlight
-    cx.fillStyle='rgba(255,255,255,.18)';
-    cx.beginPath();cx.roundRect(x0+_cw*.1,y0,_cw*.8,_ch*.2,_cw*.15);cx.fill();
+    // Draw car sprite from sheet
+    const spr=CAR_SPRITES[def.body]||CAR_SPRITES.std;
+    if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
+      cx.imageSmoothingEnabled=false;
+      cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,x0,y0,dW,dH);
+    }else{
+      cx.fillStyle=def.col;cx.fillRect(x0,y0,dW,dH);
+    }
 
     // Racing number
     const ns=Math.max(7,px*1.8),ny=isF1?px*-2.5:px*-1.2;
@@ -1307,11 +1282,11 @@ class Car{
     const px=Math.max(1.5,Math.round(Math.min(17*SC*(scaleMap[def.body]||1)/8*1.6,30*SC*(scaleMap[def.body]||1)/16*1.2)));
     const dW=px*8,dH=px*16,x0=-dW/2,y0=-dH/2;
     cx.save();cx.translate(sx,sy);cx.rotate(this.a+Math.PI);cx.globalAlpha=0.45;
-    const _gw=dW,_gh=dH,_gc=def.col||'#44ffaa';
-    cx.fillStyle=_gc;
-    cx.beginPath();cx.roundRect(x0,y0,_gw,_gh,_gw*.22);cx.fill();
-    cx.fillStyle='rgba(100,210,255,.7)';
-    cx.beginPath();cx.roundRect(x0+_gw*.18,y0+_gh*.04,_gw*.64,_gh*.2,_gw*.1);cx.fill();
+    const spr=CAR_SPRITES[def.body]||CAR_SPRITES.std;
+    if(CAR_SHEET.complete&&CAR_SHEET.naturalWidth>0){
+      cx.imageSmoothingEnabled=false;
+      cx.drawImage(CAR_SHEET,spr.sx,spr.sy,spr.sw,spr.sh,x0,y0,dW,dH);
+    }
     cx.restore();
     // Store ghost delta info for HUD
     if(ghostData) window._ghostDelta = ghostData.lapTime ? (raceT - ghostData.lapTime) : null;
@@ -2201,115 +2176,46 @@ function drawGarage(cx){
     cx.beginPath();cx.arc(dx,dotY,i===garageIdx?5:3,0,Math.PI*2);cx.fill();
   });
 
-  // ── LEFT PANEL: Canvas-drawn pixel art car ───────────────────────────────
-  const lW=CW*.45, sprSize=Math.round(Math.min(lW*.78,CH*.55));
-  const sprX=lW/2-sprSize/2, sprY=CH*.1;
-  const carColor=_hex6((S.carColors&&S.carColors[sel.id])||sel.col||'#4477ff');
+  // ── LEFT PANEL: Car sprite ────────────────────────────────────────────────
+  const lW=CW*.45, sprSize=Math.round(Math.min(lW*.85,CH*.62));
+  const sprX=lW/2-sprSize/2, sprY=CH*.12;
 
-  // Draw pixel-art top-down car on canvas using body type
-  cx.save();
-  cx.translate(sprX+sprSize/2, sprY+sprSize/2);
-  const _sc=sprSize/100; // scale factor: car fits in ~100px box
-  const _c=carColor, _c2=sel.col2||'#222';
-  const _dark=(v)=>{const r=parseInt(v.slice(1,3),16),g=parseInt(v.slice(3,5),16),b=parseInt(v.slice(5,7),16);return `rgb(${Math.max(0,r-60)},${Math.max(0,g-60)},${Math.max(0,b-60)})`;};
-  const _light=(v)=>{const r=parseInt(v.slice(1,3),16),g=parseInt(v.slice(3,5),16),b=parseInt(v.slice(5,7),16);return `rgb(${Math.min(255,r+80)},${Math.min(255,g+80)},${Math.min(255,b+80)})`;};
-  const body=sel.body||'std';
-
-  // Dimensions by body type
-  const _dims={std:{w:28,h:48},long:{w:24,h:58},compact:{w:30,h:42},tall:{w:22,h:52},wide:{w:36,h:44},f1b:{w:32,h:52},vintage:{w:28,h:48},low:{w:30,h:46},suv:{w:34,h:46},aero:{w:26,h:54}};
-  const _d=_dims[body]||_dims.std;
-  const bw=_d.w*_sc, bh=_d.h*_sc;
-
-  // Shadow
-  cx.fillStyle='rgba(0,0,0,.25)';
-  cx.beginPath();cx.ellipse(0,bh*.15,bw*.55,bh*.12,0,0,Math.PI*2);cx.fill();
-
-  // Body
-  cx.fillStyle=_c;
-  cx.beginPath();cx.roundRect(-bw/2,-bh/2,bw,bh,bw*.18);cx.fill();
-
-  // Hood/windshield gradient
-  const _hg=cx.createLinearGradient(0,-bh/2,0,-bh*.1);
-  _hg.addColorStop(0,_dark(_c));_hg.addColorStop(1,_c);
-  cx.fillStyle=_hg;
-  cx.beginPath();cx.roundRect(-bw*.45,-bh/2,bw*.9,bh*.35,bw*.15);cx.fill();
-
-  // Windshield
-  cx.fillStyle='rgba(150,220,255,.75)';
-  cx.beginPath();cx.roundRect(-bw*.3,-bh*.42,bw*.6,bh*.22,bw*.08);cx.fill();
-  // Windshield shine
-  cx.fillStyle='rgba(255,255,255,.4)';
-  cx.beginPath();cx.roundRect(-bw*.25,-bh*.4,bw*.22,bh*.08,3*_sc);cx.fill();
-
-  // Rear window
-  cx.fillStyle='rgba(100,180,255,.6)';
-  cx.beginPath();cx.roundRect(-bw*.28,bh*.12,bw*.56,bh*.16,bw*.06);cx.fill();
-
-  // Side stripes (body type specific)
-  cx.fillStyle=_c2||_dark(_c);
-  if(body==='f1b'||body==='aero'){
-    // Racing stripes
-    cx.fillRect(-bw*.06,-bh*.45,bw*.12,bh*.9);
-  } else if(body==='vintage'){
-    // Side chrome strip
-    cx.fillStyle=_light(_c);
-    cx.fillRect(-bw*.48,bh*.02,bw*.96,bh*.06);
-  } else {
-    // Door line
-    cx.fillStyle='rgba(0,0,0,.2)';
-    cx.fillRect(-bw*.45,bh*.05,bw*.9,bh*.03);
+  const spr=CAR_SPRITES&&(CAR_SPRITES[sel.body]||CAR_SPRITES.std);
+  const sheet=window._carSheetImg;
+  if(!window._carSheetImg){
+    const img=new Image();
+    img.onload=()=>{window._carSheetImg=img;};
+    img.src=CAR_SHEET_SRC; window._carSheetImg=img;
   }
-
-  // Roof panel / cockpit
-  cx.fillStyle=_dark(_c);
-  const roofW=bw*(body==='f1b'?0.32:0.5);
-  cx.beginPath();cx.roundRect(-roofW/2,-bh*.08,roofW,bh*.22,bw*.1);cx.fill();
-
-  // Headlights
-  cx.fillStyle='#ffffcc';
-  cx.shadowColor='rgba(255,255,200,.8)'; cx.shadowBlur=6*_sc;
-  cx.fillRect(-bw*.42,-bh*.47,bw*.16,bh*.06);
-  cx.fillRect(bw*.26,-bh*.47,bw*.16,bh*.06);
-  cx.shadowBlur=0;
-
-  // Tail lights
-  cx.fillStyle='#ff2200';
-  cx.shadowColor='rgba(255,30,0,.7)'; cx.shadowBlur=5*_sc;
-  cx.fillRect(-bw*.42,bh*.41,bw*.16,bh*.05);
-  cx.fillRect(bw*.26,bh*.41,bw*.16,bh*.05);
-  cx.shadowBlur=0;
-
-  // Wheels (4 corners)
-  const _ww=bw*.22, _wh=bh*.14;
-  const _wx=bw*.5+_ww*.1, _wyf=bh*.28, _wyr=bh*.28;
-  [[- _wx,-_wyf],[_wx,-_wyf],[-_wx,_wyr],[_wx,_wyr]].forEach(([wx,wy])=>{
-    cx.fillStyle='#1a1a1a';
-    cx.beginPath();cx.roundRect(wx<0?wx:wx-_ww,wy-_wh/2,_ww,_wh,_wh*.3);cx.fill();
-    cx.fillStyle='#444';
-    cx.beginPath();cx.arc(wx<0?wx+_ww/2:wx-_ww/2,wy,_wh*.28,0,Math.PI*2);cx.fill();
-    cx.fillStyle='#888';
-    cx.beginPath();cx.arc(wx<0?wx+_ww/2:wx-_ww/2,wy,_wh*.14,0,Math.PI*2);cx.fill();
-  });
-
-  // Color overlay tint
-  cx.globalAlpha=0.15;
-  cx.fillStyle=_c;
-  cx.beginPath();cx.roundRect(-bw/2,-bh/2,bw,bh,bw*.18);cx.fill();
-  cx.globalAlpha=1;
-
-  // Top highlight
-  const _hilite=cx.createLinearGradient(0,-bh/2,0,-bh*.25);
-  _hilite.addColorStop(0,'rgba(255,255,255,.25)');_hilite.addColorStop(1,'rgba(255,255,255,0)');
-  cx.fillStyle=_hilite;
-  cx.beginPath();cx.roundRect(-bw*.4,-bh/2,bw*.8,bh*.3,bw*.15);cx.fill();
-
-  cx.restore();
-
-  if(!isUnlocked){
-    cx.fillStyle='rgba(0,0,0,.65)';
-    cx.beginPath();cx.arc(sprX+sprSize/2,sprY+sprSize*.5,sprSize*.44,0,Math.PI*2);cx.fill();
-    cx.font=`${Math.round(sprSize*.38)}px monospace`; cx.textAlign='center'; cx.textBaseline='middle';
-    cx.fillText('🔒',sprX+sprSize/2,sprY+sprSize*.5);
+  if(sheet&&sheet.complete&&sheet.naturalWidth&&spr){
+    const aspect=spr.sw/spr.sh;
+    const dH=Math.round(sprSize), dW=Math.round(sprSize*aspect);
+    const dx=sprX+(sprSize-dW)/2, dy=sprY;
+    const carColor=(S.carColors&&S.carColors[sel.id])||null;
+    if(carColor){
+      const oc=document.createElement('canvas'); oc.width=dW; oc.height=dH;
+      const ox=oc.getContext('2d');
+      ox.drawImage(sheet,spr.sx,spr.sy,spr.sw,spr.sh,0,0,dW,dH);
+      ox.globalCompositeOperation='source-atop';
+      ox.globalAlpha=0.5;
+      ox.fillStyle=carColor;
+      ox.fillRect(0,0,dW,dH);
+      cx.drawImage(oc,dx,dy);
+    } else {
+      cx.drawImage(sheet,spr.sx,spr.sy,spr.sw,spr.sh,dx,dy,dW,dH);
+    }
+    if(!isUnlocked){
+      cx.fillStyle='rgba(0,0,0,.65)';
+      cx.beginPath();cx.arc(sprX+sprSize/2,sprY+sprSize/2,sprSize*.45,0,Math.PI*2);cx.fill();
+      cx.font=`${Math.round(sprSize*.4)}px monospace`; cx.textAlign='center'; cx.textBaseline='middle';
+      cx.fillText('🔒',sprX+sprSize/2,sprY+sprSize/2);
+    }
+  } else {
+    cx.fillStyle=_hex6(selCol)+'55';
+    cx.beginPath();cx.arc(sprX+sprSize/2,sprY+sprSize/2,sprSize*.4,0,Math.PI*2);cx.fill();
+    cx.fillStyle=isUnlocked?selCol:'rgba(255,255,255,.3)';
+    cx.font=`${Math.round(sprSize*.35)}px monospace`; cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText(isUnlocked?'🏎️':'🔒',sprX+sprSize/2,sprY+sprSize/2);
   }
 
   // ── NAV ARROWS — big thumb-friendly buttons ───────────────────────────────
@@ -2365,40 +2271,23 @@ function drawGarage(cx){
 
   // Upgrade pips
   if(isUnlocked){
-    const uTypes=[{k:'engine',emoji:'⚡',name:'ENGINE',c:'#e74c3c'},{k:'grip',emoji:'🔵',name:'GRIP',c:'#2ecc71'},{k:'nos',emoji:'💨',name:'NOS',c:'#3498db'}];
-    const _gap=6, _ucH=Math.max(72,Math.round(CH*.115)), _ucW=Math.floor((rW-rPad-_gap*2)/3);
-    const _ucY=CH*.62;
+    const uTypes=[{k:'engine',lbl:'⚡ ENGINE',c:'#e74c3c'},{k:'grip',lbl:'🔵 GRIP',c:'#2ecc71'},{k:'nos',lbl:'💨 NOS',c:'#3498db'}];
+    const ucW=(rW-rPad)/3-4, ucH=Math.min(72,Math.max(52,Math.round(CH*.09))), ucY=CH*.67;
     uTypes.forEach((u,i)=>{
-      const ux=rX+i*(_ucW+_gap);
+      const ux=rX+i*(ucW+6);
       const lvl=getUpgrade(sel.id,u.k);
       const canAfford=lvl<3&&S.coins>=(UPGRADE_COST[lvl]||0);
-      // Card BG
-      const _gr=cx.createLinearGradient(ux,_ucY,ux,_ucY+_ucH);
-      _gr.addColorStop(0,'rgba(30,30,50,.9)'); _gr.addColorStop(1,'rgba(15,15,30,.95)');
-      cx.fillStyle=_gr; cx.strokeStyle=lvl>=3?u.c:(canAfford?u.c:'rgba(100,100,100,.5)'); cx.lineWidth=lvl>=3?2:1.5;
-      cx.beginPath();cx.roundRect(ux,_ucY,_ucW,_ucH,8);cx.fill();cx.stroke();
-      // Emoji + Name row
-      const _nameSize=Math.max(11,Math.round(_ucH*.18));
-      cx.font=`bold ${_nameSize}px monospace`; cx.textAlign='center'; cx.textBaseline='middle';
-      cx.fillStyle=lvl>=3?u.c:(canAfford?u.c:'rgba(180,180,180,.6)');
-      cx.fillText(u.emoji+' '+u.name, ux+_ucW/2, _ucY+_ucH*.2);
-      // Pip dots - big and clear
-      const _pipSize=Math.max(13,Math.round(_ucH*.22));
-      cx.font=`${_pipSize}px monospace`;
-      const _pips=lvl===0?'○○○':lvl===1?'●○○':lvl===2?'●●○':'●●●';
-      cx.fillStyle=lvl>=3?u.c:'#fff'; cx.textBaseline='middle';
-      cx.fillText(_pips, ux+_ucW/2, _ucY+_ucH*.52);
-      // Price / MAX
+      cx.fillStyle='rgba(255,255,255,.06)'; cx.strokeStyle=canAfford&&lvl<3?u.c:lvl>=3?u.c:'rgba(80,80,80,.5)'; cx.lineWidth=1.5;
+      cx.beginPath();cx.roundRect(ux,ucY,ucW,ucH,6);cx.fill();cx.stroke();
+      const fs=Math.max(10,Math.round(ucH*.26));
+      cx.font=`bold ${fs}px monospace`; cx.textAlign='center'; cx.textBaseline='middle';
+      cx.fillStyle=canAfford&&lvl<3?u.c:lvl>=3?u.c:'rgba(160,160,160,.55)';
+      cx.fillText(u.lbl,ux+ucW/2,ucY+ucH*.26);
+      cx.fillStyle=lvl>=3?u.c:'#fff'; cx.font=`${Math.round(ucH*.32)}px monospace`;
+      cx.fillText(['○○○','●○○','●●○','●●●'][lvl],ux+ucW/2,ucY+ucH*.56);
       const cost=lvl>=3?null:UPGRADE_COST[lvl];
-      const _priceSize=Math.max(11,Math.round(_ucH*.17));
-      cx.font=`bold ${_priceSize}px monospace`;
-      if(cost){
-        cx.fillStyle=canAfford?'#fff':'rgba(150,150,150,.6)';
-        cx.fillText('$'+cost, ux+_ucW/2, _ucY+_ucH*.82);
-      } else {
-        cx.fillStyle=u.c;
-        cx.fillText('✓ MAX', ux+_ucW/2, _ucY+_ucH*.82);
-      }
+      cx.fillStyle=canAfford?u.c:'rgba(130,130,130,.55)'; cx.font=`bold ${Math.round(ucH*.24)}px monospace`;
+      cx.fillText(cost?'$'+cost:'MAX',ux+ucW/2,ucY+ucH*.84);
     });
   }
 
