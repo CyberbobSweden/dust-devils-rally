@@ -110,7 +110,7 @@ function drawTimeOverlay(cx){
   }
 }
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260601.0030'; // auto-updated each build
+const BUILD = '20260601.0110'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -2062,28 +2062,31 @@ function drawTrackSelect(cx){
       cx.fillText('Complete track '+i,cx2+cW/2,infoY+nameSize+subSize*2+14);
     }
 
-    // Buttons at bottom of card
+    // Buttons at bottom: SELECT (left 55%) + GHOST (right 42%)
     const infoH=cH-Math.floor(cH*0.5);
-    const bH=Math.max(20,Math.floor(infoH*.30));
+    const bH=Math.max(18,Math.floor(infoH*.30));
     const selBtnY=cy2+cH-bH-4;
+    const _ghOn=S.ghostEnabled||false;
     if(sel){
-      // SELECT button
-      btn(cx,cx2+4,selBtnY,cW-8,bH,'rgba(255,220,50,.3)','#ffdd33');
-      cx.fillStyle='#ffdd33';cx.font=`bold ${subSize}px monospace`;cx.textAlign='center';cx.fillText('✓ SELECTED',cx2+cW/2,selBtnY+bH*.65);
-      // GHOST: tiny pill in top-right corner of card, does NOT overlap track name/time
-      const _ghOn=S.ghostEnabled||false;
-      const _pillW=Math.round(cW*.52), _pillH=Math.round(subSize*1.4);
-      const _pillX=cx2+cW-_pillW-4, _pillY=cy2+preH+2;
-      cx.fillStyle=_ghOn?'rgba(50,220,120,.85)':'rgba(40,40,60,.8)';
-      cx.beginPath();cx.roundRect(_pillX,_pillY,_pillW,_pillH,_pillH/2);cx.fill();
-      cx.strokeStyle=_ghOn?'#44ffaa':'rgba(150,150,150,.4)';cx.lineWidth=1;
-      cx.beginPath();cx.roundRect(_pillX,_pillY,_pillW,_pillH,_pillH/2);cx.stroke();
-      cx.fillStyle=_ghOn?'#fff':'rgba(180,180,180,.7)';
-      cx.font=`bold ${Math.round(_pillH*.58)}px monospace`;cx.textAlign='center';cx.textBaseline='middle';
-      cx.fillText(_ghOn?'👻 GHOST':'👻 OFF',_pillX+_pillW/2,_pillY+_pillH/2);
+      // SELECT button - left 55%
+      const selW=Math.round((cW-10)*.55);
+      btn(cx,cx2+3,selBtnY,selW,bH,'rgba(255,220,50,.3)','#ffdd33');
+      cx.fillStyle='#ffdd33';cx.font=`bold ${Math.round(bH*.5)}px monospace`;
+      cx.textAlign='center';cx.textBaseline='middle';
+      cx.fillText('✓ SELECTED',cx2+3+selW/2,selBtnY+bH/2);
+      // GHOST pill - right 42%
+      const ghW=Math.round((cW-10)*.42);
+      const ghX=cx2+cW-ghW-3;
+      cx.fillStyle=_ghOn?'rgba(40,200,100,.8)':'rgba(40,40,60,.75)';
+      cx.strokeStyle=_ghOn?'#44ffaa':'rgba(120,120,120,.5)';cx.lineWidth=1;
+      cx.beginPath();cx.roundRect(ghX,selBtnY,ghW,bH,bH*.35);cx.fill();cx.stroke();
+      cx.fillStyle=_ghOn?'#fff':'rgba(160,160,160,.8)';
+      cx.font=`bold ${Math.round(bH*.45)}px monospace`;cx.textAlign='center';cx.textBaseline='middle';
+      cx.fillText(_ghOn?'👻ON':'👻OFF',ghX+ghW/2,selBtnY+bH/2);
     }else if(unlocked){
-      btn(cx,cx2+4,selBtnY,cW-8,bH,'rgba(60,160,220,.25)','rgba(80,180,240,.5)');
-      cx.fillStyle='#88ccff';cx.font=`bold ${subSize}px monospace`;cx.textAlign='center';cx.fillText('SELECT',cx2+cW/2,selBtnY+bH*.65);
+      btn(cx,cx2+3,selBtnY,cW-6,bH,'rgba(60,160,220,.25)','rgba(80,180,240,.5)');
+      cx.fillStyle='#88ccff';cx.font=`bold ${Math.round(bH*.5)}px monospace`;
+      cx.textAlign='center';cx.textBaseline='middle';cx.fillText('SELECT',cx2+cW/2,selBtnY+bH/2);
     }
     cx.restore();
   });
@@ -2109,11 +2112,13 @@ function trackSelectClick(mx,my){
       // Ghost toggle for currently selected track
       const _isSel=(S.currentTrack||0)===i;
       if(_isSel){
-        // Ghost pill: top-right of card at cy2+preH
         const{cW:_cW,cH:_cH}=trackLayout();
-        const _pillW=Math.round(_cW*.52), _pillH=Math.round(subSize*1.4||14);
-        const _pillX=cx2+_cW-_pillW-4, _pillY=cy2+Math.floor(_cH*0.5)+2;
-        if(mx>=_pillX&&mx<=_pillX+_pillW&&my>=_pillY&&my<=_pillY+_pillH*1.5){
+        const _infoH=_cH-Math.floor(_cH*0.5);
+        const _bH=Math.max(18,Math.floor(_infoH*.30));
+        const _selBtnY=cy2+_cH-_bH-4;
+        const _ghW=Math.round((_cW-10)*.42);
+        const _ghX=cx2+_cW-_ghW-3;
+        if(mx>=_ghX&&mx<=_ghX+_ghW&&my>=_selBtnY&&my<=_selBtnY+_bH){
           S.ghostEnabled=!(S.ghostEnabled||false);doSave();
           sfxBeep(S.ghostEnabled?660:330,.1);return;
         }
@@ -2218,12 +2223,13 @@ function drawGarage(cx){
     cx.fillText(isUnlocked?'🏎️':'🔒',sprX+sprSize/2,sprY+sprSize/2);
   }
 
-  // ── LEFT ARROWS ───────────────────────────────────────────────────────────
+  // ── NAV ARROWS — same size both sides ────────────────────────────────────
+  const _arH=Math.round(CH*.09), _arW=Math.round(CH*.065), _arY=CH*.42;
   if(garageIdx>0){
-    cx.fillStyle='rgba(255,255,255,.1)'; cx.strokeStyle='rgba(255,255,255,.2)'; cx.lineWidth=1;
-    cx.beginPath();cx.roundRect(0,CH*.3,CH*.12,CH*.4,8);cx.fill();cx.stroke();
-    cx.fillStyle='rgba(255,255,255,.8)'; cx.font=`bold ${Math.round(CH*.07)}px monospace`;
-    cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('◀',CH*.06,CH*.5);
+    cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.28)'; cx.lineWidth=1.5;
+    cx.beginPath();cx.roundRect(4,_arY,_arW,_arH,6);cx.fill();cx.stroke();
+    cx.fillStyle='rgba(255,255,255,.9)'; cx.font=`bold ${Math.round(_arH*.6)}px monospace`;
+    cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('◀',4+_arW/2,_arY+_arH/2);
   }
 
   // ── RIGHT PANEL: Info ─────────────────────────────────────────────────────
@@ -2277,11 +2283,17 @@ function drawGarage(cx){
       cx.beginPath();cx.roundRect(ux,ucY,ucW,ucH,5);cx.fill();cx.stroke();
       cx.fillStyle='#fff'; cx.font=`${Math.round(ucH*.38)}px monospace`;
       cx.textAlign='center'; cx.textBaseline='middle';
-      cx.fillText(u.lbl+' '+['○○○','●○○','●●○','●●●'][lvl],ux+ucW/2,ucY+ucH*.35);
+      // Upgrade name
+      const _uName=['ENGINE','GRIP','NOS'][i];
+      cx.fillStyle=u.c; cx.font=`bold ${Math.round(ucH*.28)}px monospace`;
+      cx.fillText(_uName,ux+ucW/2,ucY+ucH*.22);
+      // Pips
+      cx.fillStyle='#fff'; cx.font=`${Math.round(ucH*.35)}px monospace`;
+      cx.fillText(['○○○','●○○','●●○','●●●'][lvl],ux+ucW/2,ucY+ucH*.54);
       const cost=lvl>=3?null:UPGRADE_COST[lvl];
       cx.fillStyle=cost?(S.coins>=cost?u.c:'rgba(255,255,255,.3)'):'rgba(255,255,255,.2)';
-      cx.font=`bold ${Math.round(ucH*.32)}px monospace`;
-      cx.fillText(cost?'$'+cost:'MAX',ux+ucW/2,ucY+ucH*.72);
+      cx.font=`bold ${Math.round(ucH*.28)}px monospace`;
+      cx.fillText(cost?'$'+cost:'MAX',ux+ucW/2,ucY+ucH*.82);
     });
   }
 
@@ -2294,14 +2306,12 @@ function drawGarage(cx){
   cx.textAlign='center'; cx.textBaseline='middle';
   cx.fillText(isSelected?'✓ SELECTED':isUnlocked?'SELECT':'UNLOCK  $'+sel.price, btnX+btnW/2, btnY+btnH/2);
 
-  // Right arrow - small pill at right edge, vertically centered on car sprite area only
   if(garageIdx<cars2.length-1){
-    const _arH=Math.round(CH*.08), _arW=Math.round(CH*.055);
-    const _arX=CW-_arW-2, _arY=CH*.43;
-    cx.fillStyle='rgba(255,255,255,.15)'; cx.strokeStyle='rgba(255,255,255,.3)'; cx.lineWidth=1.5;
-    cx.beginPath();cx.roundRect(_arX,_arY,_arW,_arH,6);cx.fill();cx.stroke();
+    const _arX2=CW-_arW-4;
+    cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.28)'; cx.lineWidth=1.5;
+    cx.beginPath();cx.roundRect(_arX2,_arY,_arW,_arH,6);cx.fill();cx.stroke();
     cx.fillStyle='rgba(255,255,255,.9)'; cx.font=`bold ${Math.round(_arH*.6)}px monospace`;
-    cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('▶',_arX+_arW/2,_arY+_arH/2);
+    cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('▶',_arX2+_arW/2,_arY+_arH/2);
   }
 }
 
@@ -2993,41 +3003,19 @@ function resultsClick(mx,my){
 // ─── ACHIEVEMENTS SCREEN ──────────────────────────────────────────────────────
 function drawAchievements(cx){
   cx.fillStyle='#080810'; cx.fillRect(0,0,CW,CH);
+  if(!scroll.ach) scroll.ach=0;
+  const _sOff=scroll.ach;
 
-  // Top bar
-  cx.fillStyle='rgba(0,0,0,.5)'; cx.fillRect(0,0,CW,CH*.11);
-  cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.3)'; cx.lineWidth=1.5;
-  cx.beginPath();cx.roundRect(6,4,Math.max(110,CW*.18),CH*.075,8);cx.fill();cx.stroke();
-  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.034)}px monospace`;
-  cx.textAlign='center'; cx.textBaseline='middle';
-  cx.fillText('◀ BACK',6+Math.max(110,CW*.18)/2,4+CH*.0375);
+  // Achievement grid — 2 columns, bigger cards, scrollable
+  const cols=2;
+  const padX=CW*.04, headerH=CH*.13;
+  const cW2=(CW-padX*2-(cols-1)*padX*.5)/cols;
+  const cH2=Math.max(90,Math.round(CH*.20));
+  const gap=Math.round(CH*.018);
 
-  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.042)}px monospace`;
-  cx.textAlign='center'; cx.fillText('🎖️  ACHIEVEMENTS',CW/2,CH*.055);
-
-  // Progress counter
   const ach=S.achievements||{};
   const done=ACHIEVEMENTS.filter(a=>ach[a.id]).length;
-  cx.fillStyle='rgba(255,255,255,.5)'; cx.font=`${Math.round(CH*.028)}px monospace`;
-  cx.fillText(`${done} / ${ACHIEVEMENTS.length} UNLOCKED`,CW/2,CH*.093);
 
-  // Progress bar
-  const pbW=CW*.5, pbH=6, pbX=CW/2-pbW/2, pbY=CH*.108;
-  cx.fillStyle='rgba(255,255,255,.1)';cx.beginPath();cx.roundRect(pbX,pbY,pbW,pbH,3);cx.fill();
-  if(done>0){
-    const gr=cx.createLinearGradient(pbX,0,pbX+pbW,0);
-    gr.addColorStop(0,'#f0a500'); gr.addColorStop(1,'#ffdd44');
-    cx.fillStyle=gr;cx.beginPath();cx.roundRect(pbX,pbY,(done/ACHIEVEMENTS.length)*pbW,pbH,3);cx.fill();
-  }
-
-  // Achievement grid — 2 columns
-  const cols=2;
-  const padX=CW*.04, padY=CH*.13;
-  const cW=(CW-padX*2-(cols-1)*padX*.5)/cols;
-  const cH=Math.min(CH*.22,110);
-  const gap=CH*.015;
-
-  // Progress hints for trackable achievements
   function _prog(a){
     if(ach[a.id]) return null;
     if(a.id==='collector')   return {cur:Math.min((S.unlocked||[]).length,5),max:5};
@@ -3040,64 +3028,75 @@ function drawAchievements(cx){
 
   ACHIEVEMENTS.forEach((a,i)=>{
     const col=i%cols, row=Math.floor(i/cols);
-    const cx2=padX+col*(cW+padX*.5);
-    const cy2=padY+row*(cH+gap);
+    const cx2=padX+col*(cW2+padX*.5);
+    const cy2=headerH+row*(cH2+gap)-_sOff;
+    if(cy2+cH2<0||cy2>CH) return;
     const unlocked=!!ach[a.id];
     const prog=_prog(a);
 
     // Card BG
-    const alpha=unlocked?'.18':'.07';
-    cx.fillStyle=unlocked?`rgba(240,165,0,${alpha})`:`rgba(255,255,255,${alpha})`;
-    cx.strokeStyle=unlocked?'rgba(240,165,0,.4)':'rgba(255,255,255,.1)';
+    cx.fillStyle=unlocked?'rgba(240,165,0,.18)':'rgba(255,255,255,.07)';
+    cx.strokeStyle=unlocked?'rgba(240,165,0,.45)':'rgba(255,255,255,.12)';
     cx.lineWidth=1.5;
-    cx.beginPath();cx.roundRect(cx2,cy2,cW,cH,10);cx.fill();cx.stroke();
-
-    // Lock overlay
-    if(!unlocked){
-      cx.fillStyle='rgba(0,0,0,.25)';
-      cx.beginPath();cx.roundRect(cx2,cy2,cW,cH,10);cx.fill();
-    }
+    cx.beginPath();cx.roundRect(cx2,cy2,cW2,cH2,10);cx.fill();cx.stroke();
+    if(!unlocked){ cx.fillStyle='rgba(0,0,0,.2)';cx.beginPath();cx.roundRect(cx2,cy2,cW2,cH2,10);cx.fill(); }
 
     // Icon
-    cx.font=`${Math.round(cH*.38)}px monospace`;
+    const iconSz=Math.round(cH2*.5);
+    cx.font=`${iconSz}px monospace`;
     cx.textAlign='center'; cx.textBaseline='middle';
-    cx.globalAlpha=unlocked?1:.35;
-    cx.fillText(a.icon, cx2+cH*.38, cy2+cH*.36);
+    cx.globalAlpha=unlocked?1:.3;
+    cx.fillText(a.icon, cx2+iconSz*.6, cy2+cH2*.38);
     cx.globalAlpha=1;
 
-    // Name
-    cx.fillStyle=unlocked?'#f0a500':'rgba(255,255,255,.4)';
-    cx.font=`bold ${Math.round(CH*.027)}px monospace`;
+    // Name - larger
+    const tx=cx2+iconSz*1.25;
+    cx.fillStyle=unlocked?'#f0a500':'rgba(255,255,255,.45)';
+    cx.font=`bold ${Math.round(CH*.033)}px monospace`;
     cx.textAlign='left'; cx.textBaseline='top';
-    const tx=cx2+cH*.78;
-    cx.fillText(a.name.toUpperCase(), tx, cy2+cH*.1);
+    cx.fillText(a.name.toUpperCase(), tx, cy2+cH2*.08);
 
-    // Description
-    cx.fillStyle=unlocked?'rgba(255,255,255,.8)':'rgba(255,255,255,.3)';
-    cx.font=`${Math.round(CH*.022)}px monospace`;
-    cx.fillText(a.desc, tx, cy2+cH*.38);
+    // Description - larger
+    cx.fillStyle=unlocked?'rgba(255,255,255,.85)':'rgba(255,255,255,.35)';
+    cx.font=`${Math.round(CH*.026)}px monospace`;
+    cx.fillText(a.desc, tx, cy2+cH2*.38);
 
-    // Progress bar for trackable ones
+    // Progress bar
     if(prog){
-      const bW=cW-cH*.78-padX*.3, bH=4, bX=tx, bY=cy2+cH*.65;
+      const bW=cW2-iconSz*1.25-padX*.3, bH=5, bX=tx, bY=cy2+cH2*.68;
       cx.fillStyle='rgba(255,255,255,.1)';cx.beginPath();cx.roundRect(bX,bY,bW,bH,2);cx.fill();
-      if(prog.cur>0){
-        cx.fillStyle='#f0a500';cx.beginPath();cx.roundRect(bX,bY,(prog.cur/prog.max)*bW,bH,2);cx.fill();
-      }
-      cx.fillStyle='rgba(255,255,255,.5)'; cx.font=`${Math.round(CH*.018)}px monospace`;
+      if(prog.cur>0){ cx.fillStyle='#f0a500';cx.beginPath();cx.roundRect(bX,bY,(prog.cur/prog.max)*bW,bH,2);cx.fill(); }
+      cx.fillStyle='rgba(255,255,255,.55)'; cx.font=`bold ${Math.round(CH*.022)}px monospace`;
       cx.textAlign='right'; cx.textBaseline='top';
-      cx.fillText(`${prog.cur}/${prog.max}`, cx2+cW-6, cy2+cH*.58);
+      cx.fillText(`${prog.cur}/${prog.max}`, cx2+cW2-6, cy2+cH2*.58);
     }
 
-    // Unlock date badge
+    // Unlock date
     if(unlocked){
       const d=new Date(ach[a.id]);
       const ds=d.toLocaleDateString('sv-SE',{month:'short',day:'numeric'});
-      cx.fillStyle='rgba(240,165,0,.7)'; cx.font=`${Math.round(CH*.018)}px monospace`;
+      cx.fillStyle='rgba(240,165,0,.75)'; cx.font=`${Math.round(CH*.02)}px monospace`;
       cx.textAlign='right'; cx.textBaseline='bottom';
-      cx.fillText('✓ '+ds, cx2+cW-6, cy2+cH*.95);
+      cx.fillText('✓ '+ds, cx2+cW2-6, cy2+cH2*.96);
     }
   });
+
+  // Fixed header on top
+  cx.fillStyle='#080810'; cx.fillRect(0,0,CW,headerH);
+  const _bW2=Math.max(110,CW*.2), _bH2=CH*.07;
+  cx.fillStyle='rgba(255,255,255,.12)'; cx.strokeStyle='rgba(255,255,255,.3)'; cx.lineWidth=1.5;
+  cx.beginPath();cx.roundRect(6,4,_bW2,_bH2,8);cx.fill();cx.stroke();
+  cx.fillStyle='#fff'; cx.font=`bold ${Math.round(CH*.036)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText('◀ BACK',6+_bW2/2,4+_bH2/2);
+  cx.fillStyle='#f0a500'; cx.font=`bold ${Math.round(CH*.044)}px monospace`;
+  cx.textAlign='center'; cx.fillText('🎖️  ACHIEVEMENTS',CW/2,CH*.058);
+  const pbW=CW*.5, pbH=6, pbX=CW/2-pbW/2, pbY=CH*.1;
+  cx.fillStyle='rgba(255,255,255,.1)';cx.beginPath();cx.roundRect(pbX,pbY,pbW,pbH,3);cx.fill();
+  if(done>0){ const gr=cx.createLinearGradient(pbX,0,pbX+pbW,0);gr.addColorStop(0,'#f0a500');gr.addColorStop(1,'#ffdd44');cx.fillStyle=gr;cx.beginPath();cx.roundRect(pbX,pbY,(done/ACHIEVEMENTS.length)*pbW,pbH,3);cx.fill(); }
+  cx.fillStyle='rgba(255,255,255,.55)'; cx.font=`bold ${Math.round(CH*.026)}px monospace`;
+  cx.textAlign='center'; cx.textBaseline='top';
+  cx.fillText(`${done} / ${ACHIEVEMENTS.length} UNLOCKED`,CW/2,pbY+pbH+4);
 }
 
 function achievementsClick(mx,my){
@@ -3107,16 +3106,17 @@ function achievementsClick(mx,my){
 function garageClick(mx,my){
   const sel=CAR_DEFS[garageIdx]||CAR_DEFS[0];
   const isUnlocked=(S.unlocked||['banger']).includes(sel.id);
-  const arW=CH*.06;
+  const _arW2=Math.round(CH*.065)+8, _arY2=CH*.42, _arH2=Math.round(CH*.09);
 
   // BACK button - top bar area
   if(my<CH*.1){ state='menu'; sfxBeep(300,.08); return; }
 
-  // Left/right arrows - restricted to car display area only (not upgrade buttons)
-  if(mx<arW&&my>CH*.28&&my<CH*.58){
+  // Left arrow
+  if(mx<=_arW2&&my>=_arY2&&my<=_arY2+_arH2){
     if(garageIdx>0){ garageIdx--; sfxBeep(400,.06); } return;
   }
-  if(mx>CW-arW&&my>CH*.28&&my<CH*.58){
+  // Right arrow
+  if(mx>=CW-_arW2&&my>=_arY2&&my<=_arY2+_arH2){
     if(garageIdx<CAR_DEFS.length-1){ garageIdx++; sfxBeep(400,.06); } return;
   }
 
@@ -3225,6 +3225,7 @@ C.addEventListener('touchstart',e=>{
   if(state==='garage') scrollTouchStart('garage',p.y);
   else if(state==='tracks') scrollTouchStart('tracks',p.y);
   else if(state==='stats') scrollTouchStart('stats',p.y);
+  else if(state==='achievements') scrollTouchStart('ach',p.y);
   if(state==='racing'||state==='countdown') raceClick(p.x,p.y);
   if(state==='auth')        authClick(p.x,p.y);
   else if(state==='menu')   menuClick(p.x,p.y);
