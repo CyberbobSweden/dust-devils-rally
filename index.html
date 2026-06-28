@@ -110,7 +110,7 @@ function drawTimeOverlay(cx){
   }
 }
 const TRACK_UNLOCK_WINS=[0,1,2,3,4,5,6,7,8,9]; // wins needed per track
-const BUILD = '20260601.0620'; // auto-updated each build
+const BUILD = '20260628.0200'; // auto-updated each build
 
 // ─── FIREBASE (global leaderboard) ───────────────────────────────────────────
 const FB_URL = 'https://dust-devils-rally-default-rtdb.europe-west1.firebasedatabase.app';
@@ -537,10 +537,13 @@ let S = {
   unlocked:['banger'], selected:'banger',
   unlockedTracks:[0], currentTrack:0,
   bestTimes:{}, scores:[],
-  pid: Math.random().toString(36).slice(2,10), // unique device ID, generated once
-  upgrades: {}, // {carId: {engine:0, grip:0, nos:0}}
-  carColors: {}, // {carId: '#hexcolor'}
-  totalRaces:0, totalWins:0, totalCoinsEarned:0, totalDriftTime:0, winStreak:0, bestStreak:0
+  pid: Math.random().toString(36).slice(2,10),
+  upgrades: {}, carColors: {},
+  totalRaces:0, totalWins:0, totalCoinsEarned:0, totalDriftTime:0, winStreak:0, bestStreak:0,
+  // New fields
+  streak:0, lastPlayDate:'', // daily login streak
+  adsRemoved:false,          // IAP: remove ads
+  xp:0, league:'bronze',     // league system
 };
 
 function loadSave() {
@@ -767,6 +770,54 @@ function checkChallenges(entry, car, isPB, lapT){
   if(earned>0){ S.coins+=earned; S.challenges=ch; doSave(); }
   return earned;
 }
+
+// ─── STREAK + LEAGUE SYSTEM ─────────────────────────────────────────────────
+const LEAGUES=[
+  {id:'bronze', name:'BRONZE',  icon:'🥉', minXP:0,    color:'#cd7f32'},
+  {id:'silver', name:'SILVER',  icon:'🥈', minXP:500,  color:'#aaaaaa'},
+  {id:'gold',   name:'GOLD',    icon:'🥇', minXP:1500, color:'#f0a500'},
+  {id:'elite',  name:'ELITE',   icon:'💎', minXP:4000, color:'#44ddff'},
+];
+function getLeague(xp){ return LEAGUES.slice().reverse().find(l=>xp>=l.minXP)||LEAGUES[0]; }
+function getNextLeague(xp){ return LEAGUES.find(l=>l.minXP>xp)||null; }
+function updateLeague(){ S.league=getLeague(S.xp||0).id; }
+function addXP(n){ S.xp=(S.xp||0)+n; updateLeague(); }
+
+function checkDailyStreak(){
+  const today=new Date().toISOString().slice(0,10);
+  if(S.lastPlayDate===today) return;
+  const yesterday=new Date(Date.now()-864e5).toISOString().slice(0,10);
+  if(S.lastPlayDate===yesterday){ S.streak=(S.streak||0)+1; }
+  else { S.streak=1; }
+  S.lastPlayDate=today;
+  // Streak bonus coins
+  const bonus=Math.min(S.streak,7)*20;
+  S.coins+=bonus;
+  S.totalCoinsEarned=(S.totalCoinsEarned||0)+bonus;
+  doSave();
+  return bonus;
+}
+
+// ─── SHOP / IAP ───────────────────────────────────────────────────────────────
+const SHOP_ITEMS=[
+  {id:'coins_sm',  icon:'🪙', name:'250 Coins',     desc:'Quick boost',        price_usd:'$0.99', coins:250,   cat:'coins'},
+  {id:'coins_md',  icon:'💰', name:'750 Coins',     desc:'Best value',         price_usd:'$1.99', coins:750,   cat:'coins'},
+  {id:'coins_lg',  icon:'💎', name:'2000 Coins',    desc:'Mega pack',          price_usd:'$4.99', coins:2000,  cat:'coins'},
+  {id:'no_ads',    icon:'🚫', name:'Remove Ads',    desc:'Ad-free forever',    price_usd:'$1.99', coins:0,     cat:'prem'},
+  {id:'elite_car', icon:'🏎️', name:'Elite Bundle',  desc:'2 exclusive cars + 500 coins', price_usd:'$2.99', coins:500, cat:'prem'},
+];
+// Simulated IAP (no real billing yet - shows "Coming Soon" for USD items)
+function shopBuy(item){
+  if(item.cat==='coins'||item.cat==='prem'){
+    // In real app: trigger Google Play/App Store billing
+    // For now: show popup
+    window._shopMsg = item.id==='no_ads'
+      ? (S.adsRemoved?'Already purchased!':'Payment coming soon! 🚧')
+      : 'Payment coming soon! 🚧 Use earned coins in garage.';
+    window._shopMsgT = 2.5;
+  }
+}
+let _shopScroll=0;
 
 // ─── LEADERBOARD LOADER ───────────────────────────────────────────────────────
 async function loadLbScores(){
@@ -1681,7 +1732,7 @@ function buyUpgrade(carId,type){
 }
 let authMode='login', authEmail='', authPwd='', authMsg='', authMsgColor='#e74c3c';
 // ─── MENU ─────────────────────────────────────────────────────────────────────
-const MENU_ITEMS=['🏁 RACE','🚗 GARAGE','🗺 TRACKS','🏆 LEADERBOARD','🎖️ ACHIEVEMENTS'];
+const MENU_ITEMS=['🏁 RACE','🚗 GARAGE','🗺 TRACKS','🏆 LEADERBOARD','🎖️ ACHIEVEMENTS','📅 DAILY','💎 SHOP'];
 let menuSel=0;
 
 // ─── SCROLL HELPERS ───────────────────────────────────────────────────────────
@@ -1965,6 +2016,8 @@ function menuClick(mx,my){
       else if(i===2){state='tracks';scroll.tracks=0;}
       else if(i===3){state='leaderboard';lbTab=0;if(!scoresLoading&&(!globalScores||scoresError))fbLoad();}
       else if(i===4){state='achievements';}
+      else if(i===5){state='daily'; getDailyChallenges();}
+      else if(i===6){state='shop'; window._shopMsgT=0;}
     }
   });
 }
@@ -2311,7 +2364,165 @@ function drawGarage(cx){
   }
 }
 
+// ─── DAILY CHALLENGES SCREEN ──────────────────────────────────────────────────
+function drawDaily(cx){
+  cx.save();
+  // BG
+  cx.fillStyle='#08080f';cx.fillRect(0,0,CW,CH);
+  // Header
+  cx.fillStyle='rgba(255,200,50,.12)';cx.fillRect(0,0,CW,CH*.09);
+  cx.font=`bold ${Math.round(CH*.045)}px monospace`;cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillStyle='#ffcc33';cx.fillText('📅 DAILY CHALLENGES',CW/2,CH*.046);
+  // Back
+  cx.fillStyle='rgba(255,255,255,.12)';cx.strokeStyle='rgba(255,255,255,.2)';cx.lineWidth=1;
+  cx.beginPath();cx.roundRect(8,8,CW*.22,CH*.065,6);cx.fill();cx.stroke();
+  cx.fillStyle='#fff';cx.font=`bold ${Math.round(CH*.03)}px monospace`;cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillText('◀ BACK',8+CW*.11,8+CH*.032);
+
+  // Streak
+  const streak=S.streak||0;
+  const today=new Date().toISOString().slice(0,10);
+  const playedToday=S.lastPlayDate===today;
+  const _sY=CH*.11;
+  cx.fillStyle='rgba(255,140,0,.15)';cx.beginPath();cx.roundRect(CW*.05,_sY,CW*.9,CH*.1,10);cx.fill();
+  cx.fillStyle='rgba(255,140,0,.4)';cx.strokeStyle='rgba(255,140,0,.5)';cx.lineWidth=1;
+  cx.beginPath();cx.roundRect(CW*.05,_sY,CW*.9,CH*.1,10);cx.stroke();
+  cx.font=`bold ${Math.round(CH*.05)}px monospace`;cx.textAlign='left';cx.textBaseline='middle';
+  cx.fillStyle='#ff8800';
+  cx.fillText('🔥 '+streak+'-DAY STREAK',CW*.08,_sY+CH*.05);
+  const _bonus=Math.min(streak,7)*20;
+  cx.font=`${Math.round(CH*.025)}px monospace`;cx.fillStyle='rgba(255,200,100,.7)';
+  cx.fillText(playedToday?'Bonus claimed today ✓':'Login bonus: +'+_bonus+' coins',CW*.5,_sY+CH*.05);
+
+  // Challenge cards
+  const chs=getDailyChallenges();
+  const _cY=CH*.24, _cH=CH*.155, _gap=CH*.018;
+  chs.forEach((c,i)=>{
+    const cy=_cY+i*(_cH+_gap);
+    const done=c.done;
+    cx.fillStyle=done?'rgba(46,204,113,.18)':'rgba(255,255,255,.06)';
+    cx.strokeStyle=done?'#2ecc71':'rgba(255,255,255,.15)';cx.lineWidth=done?2:1;
+    cx.beginPath();cx.roundRect(CW*.05,cy,CW*.9,_cH,10);cx.fill();cx.stroke();
+    // Icon + title
+    const _icons=['🏁','🥈','🧼','⭐','🔄','💨','⚡'];
+    const _idxMap={win:0,top2:1,clean:2,pb:3,race3:4,nos:5,fast:6};
+    const ico=_icons[_idxMap[c.id]||0]||'🎯';
+    cx.font=`${Math.round(_cH*.38)}px monospace`;cx.textAlign='left';cx.textBaseline='middle';
+    cx.fillText(ico,CW*.08,cy+_cH*.38);
+    cx.font=`bold ${Math.round(_cH*.25)}px monospace`;cx.fillStyle='#fff';
+    cx.fillText(c.desc,CW*.18,cy+_cH*.3);
+    cx.font=`${Math.round(_cH*.2)}px monospace`;
+    cx.fillStyle=done?'#2ecc71':'rgba(255,200,50,.8)';
+    cx.fillText(done?'✓ DONE — +'+c.reward+' coins collected':'Reward: +'+c.reward+' coins',CW*.18,cy+_cH*.62);
+    // Progress bar
+    const _bx=CW*.18,_bw=CW*.68,_bY=cy+_cH*.8,_bH=4;
+    cx.fillStyle='rgba(255,255,255,.1)';cx.beginPath();cx.roundRect(_bx,_bY,_bw,_bH,2);cx.fill();
+    cx.fillStyle=done?'#2ecc71':'rgba(255,200,50,.6)';
+    cx.beginPath();cx.roundRect(_bx,_bY,done?_bw:0,_bH,2);cx.fill();
+  });
+
+  // League progress
+  const _lY=CH*.24+3*(_cH+_gap)+CH*.02;
+  const league=getLeague(S.xp||0);
+  const next=getNextLeague(S.xp||0);
+  cx.fillStyle='rgba(255,255,255,.06)';cx.strokeStyle='rgba(255,255,255,.1)';cx.lineWidth=1;
+  cx.beginPath();cx.roundRect(CW*.05,_lY,CW*.9,CH*.1,10);cx.fill();cx.stroke();
+  cx.font=`bold ${Math.round(CH*.033)}px monospace`;cx.textAlign='left';cx.textBaseline='middle';
+  cx.fillStyle=league.color;
+  cx.fillText(league.icon+' '+league.name+' LEAGUE',CW*.08,_lY+CH*.035);
+  cx.font=`${Math.round(CH*.024)}px monospace`;cx.fillStyle='rgba(255,255,255,.6)';
+  cx.fillText(next?'XP: '+(S.xp||0)+' / '+next.minXP+' → '+next.icon+' '+next.name:'MAX LEAGUE 🏆',CW*.08,_lY+CH*.068);
+  if(next){
+    const _prog=Math.min(1,(S.xp||0-league.minXP)/(next.minXP-league.minXP));
+    cx.fillStyle='rgba(255,255,255,.1)';cx.beginPath();cx.roundRect(CW*.5,_lY+CH*.04,CW*.42,6,3);cx.fill();
+    cx.fillStyle=league.color;cx.beginPath();cx.roundRect(CW*.5,_lY+CH*.04,CW*.42*_prog,6,3);cx.fill();
+  }
+  cx.restore();
+}
+function dailyClick(mx,my){
+  if(my<CH*.09&&mx<CW*.25){ state='menu'; sfxBeep(300,.08); }
+}
+
+// ─── SHOP SCREEN ──────────────────────────────────────────────────────────────
+function drawShop(cx){
+  cx.save();
+  cx.fillStyle='#08080f';cx.fillRect(0,0,CW,CH);
+  cx.fillStyle='rgba(68,180,255,.1)';cx.fillRect(0,0,CW,CH*.09);
+  cx.font=`bold ${Math.round(CH*.045)}px monospace`;cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillStyle='#44ddff';cx.fillText('💎 SHOP',CW/2,CH*.046);
+  // Back
+  cx.fillStyle='rgba(255,255,255,.12)';cx.strokeStyle='rgba(255,255,255,.2)';cx.lineWidth=1;
+  cx.beginPath();cx.roundRect(8,8,CW*.22,CH*.065,6);cx.fill();cx.stroke();
+  cx.fillStyle='#fff';cx.font=`bold ${Math.round(CH*.03)}px monospace`;cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillText('◀ BACK',8+CW*.11,8+CH*.032);
+  // Coins balance
+  cx.font=`bold ${Math.round(CH*.035)}px monospace`;cx.textAlign='right';cx.fillStyle='#f0a500';
+  cx.fillText('💰 '+S.coins,CW-12,CH*.046);
+
+  // IAP banner
+  const _bY=CH*.1;
+  const _bg=cx.createLinearGradient(0,_bY,CW,_bY+CH*.1);
+  _bg.addColorStop(0,'rgba(68,100,220,.3)');_bg.addColorStop(1,'rgba(100,40,200,.3)');
+  cx.fillStyle=_bg;cx.beginPath();cx.roundRect(CW*.03,_bY,CW*.94,CH*.09,10);cx.fill();
+  cx.fillStyle='rgba(255,255,255,.8)';cx.font=`bold ${Math.round(CH*.028)}px monospace`;
+  cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillText('🚧 In-App Purchases coming soon! Use coins from races 🚧',CW/2,_bY+CH*.045);
+
+  // Items
+  const _iY=CH*.22, _iH=CH*.13, _gap=CH*.015;
+  SHOP_ITEMS.forEach((item,i)=>{
+    const iy=_iY+i*(_iH+_gap);
+    const isPrem=item.cat==='prem';
+    const owned=item.id==='no_ads'&&S.adsRemoved;
+    // Card
+    const _cg=cx.createLinearGradient(CW*.03,iy,CW*.97,iy+_iH);
+    if(isPrem){ _cg.addColorStop(0,'rgba(68,60,120,.9)');_cg.addColorStop(1,'rgba(40,30,80,.9)'); }
+    else { _cg.addColorStop(0,'rgba(30,50,30,.9)');_cg.addColorStop(1,'rgba(20,35,20,.9)'); }
+    cx.fillStyle=_cg;cx.strokeStyle=isPrem?'rgba(68,180,255,.4)':'rgba(240,165,0,.3)';cx.lineWidth=1.5;
+    cx.beginPath();cx.roundRect(CW*.03,iy,CW*.94,_iH,8);cx.fill();cx.stroke();
+    // Icon
+    cx.font=`${Math.round(_iH*.5)}px monospace`;cx.textAlign='left';cx.textBaseline='middle';
+    cx.fillText(item.icon,CW*.06,iy+_iH*.5);
+    // Name + desc
+    cx.font=`bold ${Math.round(_iH*.25)}px monospace`;cx.fillStyle='#fff';
+    cx.fillText(item.name,CW*.16,iy+_iH*.32);
+    cx.font=`${Math.round(_iH*.2)}px monospace`;cx.fillStyle='rgba(200,200,200,.7)';
+    cx.fillText(item.desc,CW*.16,iy+_iH*.62);
+    // Price button
+    const _pW=CW*.22,_pH=_iH*.55,_pX=CW*.73,_pY=iy+_iH*.22;
+    cx.fillStyle=owned?'rgba(46,204,113,.3)':isPrem?'rgba(68,130,255,.35)':'rgba(240,165,0,.35)';
+    cx.beginPath();cx.roundRect(_pX,_pY,_pW,_pH,6);cx.fill();
+    cx.font=`bold ${Math.round(_pH*.38)}px monospace`;cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillStyle=owned?'#2ecc71':isPrem?'#44aaff':'#f0a500';
+    cx.fillText(owned?'✓ OWNED':item.price_usd,_pX+_pW/2,_pY+_pH/2);
+  });
+
+  // Shop message popup
+  if(window._shopMsgT>0){
+    window._shopMsgT-=0.016;
+    const alpha=Math.min(1,window._shopMsgT);
+    cx.save();cx.globalAlpha=alpha;
+    cx.fillStyle='rgba(0,0,0,.85)';cx.beginPath();cx.roundRect(CW*.1,CH*.4,CW*.8,CH*.12,10);cx.fill();
+    cx.fillStyle='#fff';cx.font=`bold ${Math.round(CH*.03)}px monospace`;
+    cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillText(window._shopMsg||'',CW/2,CH*.46);
+    cx.restore();
+  }
+  cx.restore();
+}
+function shopClick(mx,my){
+  if(my<CH*.09&&mx<CW*.25){ state='menu'; sfxBeep(300,.08); return; }
+  const _iY=CH*.22,_iH=CH*.13,_gap=CH*.015;
+  SHOP_ITEMS.forEach((item,i)=>{
+    const iy=_iY+i*(_iH+_gap);
+    if(my>=iy&&my<iy+_iH&&mx>=CW*.03&&mx<CW*.97){
+      shopBuy(item); sfxBeep(660,.06);
+    }
+  });
+}
+
 function drawStats(cx){
+  cx.save();
   cx.save();
   cx.fillStyle='#0a0a14'; cx.fillRect(0,0,CW,CH);
   // Scrollable stats — use scroll.stats offset
@@ -3237,6 +3448,8 @@ C.addEventListener('touchstart',e=>{
   else if(state==='auth')    authClick(e.clientX,e.clientY);
   else if(state==='results') resultsClick(p.x,p.y);
   else if(state==='achievements') achievementsClick(p.x,p.y);
+  else if(state==='daily') dailyClick(p.x,p.y);
+  else if(state==='shop') shopClick(p.x,p.y);
   updCtrl();
 },{passive:false});
 C.addEventListener('touchend',e=>{
@@ -3249,6 +3462,8 @@ C.addEventListener('touchend',e=>{
   else if(state==='leaderboard') leaderboardClick(p.x,p.y);
   else if(state==='settings') settingsClick(p.x,p.y);
   else if(state==='results') resultsClick(p.x,p.y);
+  else if(state==='daily') dailyClick(p.x,p.y);
+  else if(state==='shop') shopClick(p.x,p.y);
   scrollTouchEnd();
   for(const t of e.changedTouches) delete AT[t.identifier];
   updCtrl();
@@ -3271,6 +3486,8 @@ C.addEventListener('click',e=>{
   else if(state==='settings')    settingsClick(p.x,p.y);
   else if(state==='results')     resultsClick(p.x,p.y);
   else if(state==='achievements') achievementsClick(p.x,p.y);
+  else if(state==='daily') dailyClick(p.x,p.y);
+  else if(state==='shop') shopClick(p.x,p.y);
   else if(state==='racing'||state==='countdown') raceClick(p.x,p.y);
 });
 document.addEventListener('keydown',e=>{
@@ -3331,7 +3548,10 @@ function raceClick(mx,my){
     state='menu'; bgmMenu();
   }
 }
-function startRace(){ bgmRace(); initWeather(S.currentTrack||0); _driftTime=0; _driftBonus=0; _driftCombo=0;
+function startRace(){ bgmRace(); initWeather(S.currentTrack||0);
+  // Daily streak bonus
+  const _streakBonus=checkDailyStreak();
+  if(_streakBonus>0) window._streakPopup={coins:_streakBonus,streak:S.streak,t:3.0}; _driftTime=0; _driftBonus=0; _driftCombo=0;
   const g=setupRace();
   cars=[g.pl,...g.ai];
   cam=g.cam;
@@ -3399,7 +3619,11 @@ function finishRace(){ spawnConfetti();
   S.totalDriftTime=(S.totalDriftTime||0)+_driftTime;
   const entry={name:S.name||'ANON',time:raceT,pos,car:S.selected,track:tid};
   S.scores.push(entry); S.scores.sort((a,b)=>a.time-b.time); S.scores=S.scores.slice(0,10);
-  S.coins+=driftEarned; S.totalCoinsEarned=(S.totalCoinsEarned||0)+resCoins+driftEarned; doSave(); fbSave(entry);
+  S.coins+=driftEarned; S.totalCoinsEarned=(S.totalCoinsEarned||0)+resCoins+driftEarned;
+  // XP gain
+  const _xpGain=[100,60,35][pos-1]||20;
+  addXP(_xpGain); if(!resReasons.find(r=>r.includes('XP'))) resReasons.push('XP +'+_xpGain+' → '+getLeague(S.xp).icon+' '+getLeague(S.xp).name);
+  doSave(); fbSave(entry);
   // Check daily challenges
   const _prevBest=S.bestTimes[tid]||99999;
   const _isPB=raceT<_prevBest;
@@ -3473,6 +3697,12 @@ function loop(now){
 
     } else if(state==='settings'){
       drawSettings(G);
+
+    } else if(state==='daily'){
+      drawDaily(G);
+
+    } else if(state==='shop'){
+      drawShop(G);
 
     } else if(state==='stats'){
       drawStats(G);
@@ -3634,6 +3864,18 @@ function loop(now){
         G.restore();
       }
       if(state==='countdown') drawCountdown(G, cdN, cdT);
+      // Streak popup
+      if(window._streakPopup&&window._streakPopup.t>0){
+        window._streakPopup.t-=dt;
+        const sp=window._streakPopup, a=Math.min(1,sp.t);
+        G.save(); G.globalAlpha=a;
+        G.fillStyle='rgba(255,140,0,.9)';
+        G.beginPath();G.roundRect(CW*.15,CH*.15,CW*.7,CH*.12,10);G.fill();
+        G.fillStyle='#000';G.font=`bold ${Math.round(CH*.038)}px monospace`;
+        G.textAlign='center';G.textBaseline='middle';
+        G.fillText('🔥 '+sp.streak+'-DAY STREAK! +'+sp.coins+' coins',CW/2,CH*.21);
+        G.restore();
+      }
       drawCtrl(G, ctrlL, ctrlR, ctrlN, ctrlB, cars[0], raceT);
     }
   } catch(err){
